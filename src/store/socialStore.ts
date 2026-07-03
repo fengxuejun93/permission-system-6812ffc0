@@ -28,13 +28,14 @@ interface SocialState {
   getPendingSent: () => Friendship[];
   getVisiblePosts: (ownerId?: string) => Post[];
   getVisiblePhotos: (ownerId: string) => Photo[];
+  getVisiblePhotosForPost: (photoIds: string[]) => Photo[];
   getCommentsForPost: (postId: string) => Comment[];
   canComment: (postId: string) => boolean;
   getStats: () => Stats;
 
   // 操作
   switchUser: (userId: string) => void;
-  addPost: (content: string, visibility: Visibility, imageUrl?: string) => void;
+  addPost: (content: string, visibility: Visibility, imageUrl?: string, photoLabel?: string) => void;
   addComment: (postId: string, parentId: string | null, content: string) => boolean;
   sendFriendRequest: (friendId: string) => void;
   acceptFriendRequest: (userId: string) => void;
@@ -131,6 +132,18 @@ export const useSocialStore = create<SocialState>((set, get) => ({
     });
   },
 
+  getVisiblePhotosForPost: (photoIds: string[]) => {
+    const state = get();
+    const currentId = state.currentUserId;
+    return state.photos.filter(photo => {
+      if (!photoIds.includes(photo.id)) return false;
+      if (photo.ownerId === currentId) return true;
+      if (photo.visibility === 'public') return true;
+      if (photo.visibility === 'friends' && state.isFriend(photo.ownerId)) return true;
+      return false;
+    });
+  },
+
   getCommentsForPost: (postId: string) => {
     return get().comments.filter(c => c.postId === postId);
   },
@@ -168,7 +181,7 @@ export const useSocialStore = create<SocialState>((set, get) => ({
     set({ currentUserId: userId });
   },
 
-  addPost: (content: string, visibility: Visibility, imageUrl?: string) => {
+  addPost: (content: string, visibility: Visibility, imageUrl?: string, photoLabel?: string) => {
     const state = get();
     const newPostId = generateId('p');
     const photoIds: string[] = [];
@@ -180,7 +193,7 @@ export const useSocialStore = create<SocialState>((set, get) => ({
         postId: newPostId,
         color: '#6C9BD2',
         visibility,
-        label: '新照片',
+        label: photoLabel || '新照片',
         imageUrl,
       };
       photoIds.push(newPhotoId);

@@ -26,14 +26,14 @@ interface Props {
 }
 
 export default function PostCard({ post }: Props) {
-  const { users, photos, currentUserId, isFriend } = useSocialStore();
+  const { users, photos, currentUserId, getVisiblePhotosForPost } = useSocialStore();
   const navigate = useNavigate();
   const author = users.find(u => u.id === post.authorId);
-  const postPhotos = photos.filter(p => post.photoIds.includes(p.id));
   const isAuthor = post.authorId === currentUserId;
 
-  // 不可见照片提示
-  const invisiblePhotoCount = post.photoIds.length - postPhotos.length;
+  // 按可见性过滤照片（核心修复：之前直接用不过滤的 photos）
+  const visiblePhotos = getVisiblePhotosForPost(post.photoIds);
+  const invisiblePhotoCount = post.photoIds.length - visiblePhotos.length;
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
@@ -57,9 +57,9 @@ export default function PostCard({ post }: Props) {
 
           <p className="text-sm text-gray-800 mt-2 leading-relaxed">{post.content}</p>
 
-          {postPhotos.length > 0 && (
+          {visiblePhotos.length > 0 && (
             <div className="flex gap-2 mt-2 flex-wrap">
-              {postPhotos.map(photo => (
+              {visiblePhotos.map(photo => (
                 <div key={photo.id} className="relative rounded-md overflow-hidden">
                   {photo.imageUrl ? (
                     <img src={photo.imageUrl} alt={photo.label} className="w-40 h-30 object-cover rounded-md" />
@@ -72,7 +72,7 @@ export default function PostCard({ post }: Props) {
                     </div>
                   )}
                   {isAuthor && (
-                    <div className="absolute top-1 right-1 bg-black/30 rounded-full p-0.5">
+                    <div className="absolute top-1 right-1 bg-black/30 rounded-full p-0.5" title={photo.visibility === 'self' ? '仅自己可见' : photo.visibility === 'friends' ? '好友可见' : '公开'}>
                       {photo.visibility === 'self' ? <EyeOff size={10} className="text-white/80" /> : <Eye size={10} className="text-white/80" />}
                     </div>
                   )}
@@ -81,8 +81,8 @@ export default function PostCard({ post }: Props) {
             </div>
           )}
 
-          {/* 不可见照片提示（查看别人主页时） */}
-          {invisiblePhotoCount > 0 && !isAuthor && (
+          {/* 不可见照片提示 */}
+          {invisiblePhotoCount > 0 && (
             <div className="flex items-center gap-1 mt-2 text-[10px] text-gray-400 bg-gray-50 rounded px-2 py-1">
               <EyeOff size={10} /> 另有 {invisiblePhotoCount} 张照片因权限不可见
             </div>

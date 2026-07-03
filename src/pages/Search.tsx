@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 
 // 搜索结果中的好友按钮
 function SearchFriendButton({ userId, userName }: { userId: string; userName: string }) {
-  const { getRelation, sendFriendRequest, cancelFriendRequest } = useSocialStore();
+  const { getRelation, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, rejectFriendRequest } = useSocialStore();
   const { showToast } = useToast();
   const relation = getRelation(userId);
 
@@ -21,6 +21,16 @@ function SearchFriendButton({ userId, userName }: { userId: string; userName: st
   const handleCancel = () => {
     cancelFriendRequest(userId);
     showToast('已取消好友申请');
+  };
+
+  const handleAccept = () => {
+    acceptFriendRequest(userId);
+    showToast(`已通过 ${userName} 的好友申请`);
+  };
+
+  const handleReject = () => {
+    rejectFriendRequest(userId);
+    showToast(`已拒绝 ${userName} 的好友申请`);
   };
 
   switch (relation) {
@@ -41,8 +51,14 @@ function SearchFriendButton({ userId, userName }: { userId: string; userName: st
       );
     case 'pending_received':
       return (
-        <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 rounded-full px-3 py-1.5">
-          <Clock size={14} /> 待你确认
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 rounded-full px-3 py-1.5">
+            <Clock size={14} /> 待你确认
+          </div>
+          <div className="flex gap-1.5">
+            <button onClick={handleAccept} className="text-[10px] text-[#3B5998] hover:underline">通过</button>
+            <button onClick={handleReject} className="text-[10px] text-gray-400 hover:text-red-500">拒绝</button>
+          </div>
         </div>
       );
     case 'rejected':

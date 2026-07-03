@@ -12,7 +12,6 @@ const visOptions: { value: Visibility; label: string; icon: React.ReactNode }[] 
   { value: 'self', label: '仅自己可见', icon: <Lock size={14} /> },
 ];
 
-// 内置示例图片
 const sampleImages = [
   { label: '风景', color: '#6BA3D6', pattern: 4 },
   { label: '美食', color: '#E8915B', pattern: 5 },
@@ -32,7 +31,6 @@ export default function PostForm() {
   const visDropRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 点击外部关闭可见性下拉
   useEffect(() => {
     if (!visDropdown) return;
     const handler = (e: MouseEvent) => {
@@ -49,13 +47,15 @@ export default function PostForm() {
       showToast('请输入动态内容', 'info');
       return;
     }
-    addPost(content.trim(), visibility, imageUrl);
+    addPost(content.trim(), visibility, imageUrl, imageLabel || undefined);
     showToast('动态发布成功！');
     setContent('');
     setImageUrl(undefined);
     setImageLabel('');
     setVisibility('public');
     setShowImagePicker(false);
+    // 重置文件输入，允许重新选同一文件
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleLocalImage = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,8 +83,14 @@ export default function PostForm() {
   };
 
   const removeImage = () => {
+    // 释放 blob URL 防止内存泄漏
+    if (imageUrl && imageUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(imageUrl);
+    }
     setImageUrl(undefined);
     setImageLabel('');
+    // 重置文件输入
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const currentVis = visOptions.find(v => v.value === visibility);
