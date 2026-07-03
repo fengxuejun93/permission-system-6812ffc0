@@ -1,0 +1,92 @@
+import { useSocialStore } from '@/store/socialStore';
+import { Users, FileText, Image, Search, Home, ChevronDown } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+
+export default function Header() {
+  const { currentUserId, users, switchUser, getStats } = useSocialStore();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const dropRef = useRef<HTMLDivElement>(null);
+  const stats = getStats();
+  const currentUser = users.find(u => u.id === currentUserId);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <header className="bg-[#3B5998] text-white h-14 flex items-center px-4 shadow-md fixed top-0 left-0 right-0 z-50">
+      <div className="flex items-center gap-3 mr-8">
+        <div className="text-xl font-bold tracking-wide">校内网</div>
+        <span className="text-[#8B9DC3] text-xs">Xiaonei</span>
+      </div>
+
+      <nav className="flex items-center gap-1 mr-auto">
+        <button
+          onClick={() => navigate('/')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${location.pathname === '/' ? 'bg-[#2A4A7F]' : 'hover:bg-[#2A4A7F]/60'}`}
+        >
+          <Home size={16} /> 首页
+        </button>
+        <button
+          onClick={() => navigate('/search')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${location.pathname === '/search' ? 'bg-[#2A4A7F]' : 'hover:bg-[#2A4A7F]/60'}`}
+        >
+          <Search size={16} /> 搜索同学
+        </button>
+        <button
+          onClick={() => navigate(`/profile/${currentUserId}`)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${location.pathname.startsWith('/profile') ? 'bg-[#2A4A7F]' : 'hover:bg-[#2A4A7F]/60'}`}
+        >
+          个人主页
+        </button>
+      </nav>
+
+      <div className="flex items-center gap-4 text-sm">
+        <div className="flex items-center gap-3 mr-2">
+          <span className="flex items-center gap-1 text-[#B8C9E8]"><Users size={14} /> <b className="text-white">{stats.friendCount}</b></span>
+          <span className="flex items-center gap-1 text-[#B8C9E8]"><FileText size={14} /> <b className="text-white">{stats.postCount}</b></span>
+          <span className="flex items-center gap-1 text-[#B8C9E8]"><Image size={14} /> <b className="text-white">{stats.photoCount}</b></span>
+        </div>
+
+        <div ref={dropRef} className="relative">
+          <button
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="flex items-center gap-2 px-2 py-1 rounded hover:bg-[#2A4A7F] transition-colors"
+          >
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: currentUser?.avatarColor }}>
+              {currentUser?.name[0]}
+            </div>
+            <span className="text-sm">{currentUser?.name}</span>
+            <ChevronDown size={14} className={`transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {dropdownOpen && (
+            <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-1 w-48 z-50">
+              <div className="px-3 py-1.5 text-xs text-gray-400 border-b">切换模拟账号</div>
+              {users.map(u => (
+                <button
+                  key={u.id}
+                  onClick={() => { switchUser(u.id); setDropdownOpen(false); }}
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${u.id === currentUserId ? 'bg-blue-50 text-[#3B5998] font-medium' : 'text-gray-700'}`}
+                >
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: u.avatarColor }}>{u.name[0]}</div>
+                  <span>{u.name}</span>
+                  <span className="text-xs text-gray-400 ml-auto">{u.school}</span>
+                  {u.id === currentUserId && <span className="text-[10px] bg-[#3B5998] text-white px-1.5 py-0.5 rounded ml-1">当前</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}
