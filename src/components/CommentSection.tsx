@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSocialStore } from '@/store/socialStore';
+import { useToast } from '@/components/Toast';
 import Avatar from './Avatar';
 import { MessageCircle, CornerDownRight } from 'lucide-react';
 
@@ -9,10 +10,18 @@ interface Props {
 
 export default function CommentSection({ postId }: Props) {
   const { getCommentsForPost, addComment, users, currentUserId } = useSocialStore();
+  const { showToast } = useToast();
   const [newComment, setNewComment] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const comments = getCommentsForPost(postId);
+
+  // 有新评论时自动展开
+  useEffect(() => {
+    if (comments.length > 0 && !expanded) {
+      setExpanded(true);
+    }
+  }, [comments.length]);
 
   const topLevel = comments.filter(c => c.parentId === null);
   const getReplies = (parentId: string) => comments.filter(c => c.parentId === parentId);
@@ -20,6 +29,7 @@ export default function CommentSection({ postId }: Props) {
   const handleSubmit = () => {
     if (!newComment.trim()) return;
     addComment(postId, replyTo, newComment.trim());
+    showToast(replyTo ? '回复成功！' : '评论成功！');
     setNewComment('');
     setReplyTo(null);
   };

@@ -1,24 +1,37 @@
 import { useState } from 'react';
 import { useSocialStore } from '@/store/socialStore';
+import { useToast } from '@/components/Toast';
 import Header from '@/components/Header';
 import Avatar from '@/components/Avatar';
-import { Search, UserPlus, Check, Users } from 'lucide-react';
+import { Search, UserPlus, Check, Users, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function SearchPage() {
   const { searchUsers, isFriend, addFriend, currentUserId, getFriendsOf } = useSocialStore();
+  const { showToast } = useToast();
   const [keyword, setKeyword] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
   const [results, setResults] = useState<ReturnType<typeof searchUsers>>([]);
   const navigate = useNavigate();
   const friends = getFriendsOf(currentUserId);
 
   const handleSearch = () => {
+    if (!keyword.trim()) {
+      showToast('请输入搜索关键词', 'info');
+      return;
+    }
     const found = searchUsers(keyword);
     setResults(found);
+    setHasSearched(true);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSearch();
+  };
+
+  const handleAddFriend = (userId: string, userName: string) => {
+    addFriend(userId);
+    showToast(`已添加 ${userName} 为好友！`);
   };
 
   return (
@@ -41,15 +54,14 @@ export default function SearchPage() {
             </div>
             <button
               onClick={handleSearch}
-              disabled={!keyword.trim()}
-              className="bg-[#3B5998] text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-[#2A4A7F] disabled:opacity-40 transition-colors"
+              className="bg-[#3B5998] text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-[#2A4A7F] transition-colors"
             >
               搜索
             </button>
           </div>
         </div>
 
-        {results.length > 0 && (
+        {hasSearched && results.length > 0 && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="px-4 py-3 border-b border-gray-100">
               <span className="text-sm text-gray-500">找到 {results.length} 位同学</span>
@@ -79,7 +91,7 @@ export default function SearchPage() {
                         </div>
                       ) : (
                         <button
-                          onClick={() => addFriend(user.id)}
+                          onClick={() => handleAddFriend(user.id, user.name)}
                           className="flex items-center gap-1 text-xs bg-[#3B5998] text-white rounded-full px-3 py-1.5 hover:bg-[#2A4A7F] transition-colors"
                         >
                           <UserPlus size={14} /> 加好友
@@ -93,33 +105,40 @@ export default function SearchPage() {
           </div>
         )}
 
-        {results.length === 0 && keyword && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center text-gray-400 text-sm">
-            未找到匹配的同学
+        {hasSearched && results.length === 0 && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+            <AlertCircle size={32} className="text-gray-300 mx-auto mb-2" />
+            <p className="text-gray-400 text-sm">未找到匹配「{keyword}」的同学</p>
+            <p className="text-gray-300 text-xs mt-1">试试其他关键词，如学校名或班级名</p>
           </div>
         )}
 
-        {results.length === 0 && !keyword && (
+        {!hasSearched && (
           <div className="space-y-4">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
               <h3 className="font-semibold text-sm text-gray-800 mb-3 flex items-center gap-1.5">
                 <Users size={16} className="text-[#3B5998]" /> 我的好友
+                <span className="text-xs text-gray-400 font-normal ml-1">({friends.length})</span>
               </h3>
-              <div className="grid grid-cols-2 gap-2">
-                {friends.map(friend => (
-                  <button
-                    key={friend.id}
-                    onClick={() => navigate(`/profile/${friend.id}`)}
-                    className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-gray-50 transition-colors text-left"
-                  >
-                    <Avatar userId={friend.id} size={36} />
-                    <div className="min-w-0">
-                      <div className="text-sm text-gray-800 truncate">{friend.name}</div>
-                      <div className="text-xs text-gray-400 truncate">{friend.school}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+              {friends.length > 0 ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {friends.map(friend => (
+                    <button
+                      key={friend.id}
+                      onClick={() => navigate(`/profile/${friend.id}`)}
+                      className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <Avatar userId={friend.id} size={36} />
+                      <div className="min-w-0">
+                        <div className="text-sm text-gray-800 truncate">{friend.name}</div>
+                        <div className="text-xs text-gray-400 truncate">{friend.school}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400 text-center py-4">暂无好友，搜索并添加同学吧</p>
+              )}
             </div>
 
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
@@ -128,7 +147,7 @@ export default function SearchPage() {
                 {['北京大学', '清华大学', '浙江大学', '计算机', '经管'].map(tag => (
                   <button
                     key={tag}
-                    onClick={() => { setKeyword(tag); const found = searchUsers(tag); setResults(found); }}
+                    onClick={() => { setKeyword(tag); const found = searchUsers(tag); setResults(found); setHasSearched(true); }}
                     className="text-xs bg-gray-100 text-gray-600 px-3 py-1.5 rounded-full hover:bg-gray-200 transition-colors"
                   >
                     {tag}

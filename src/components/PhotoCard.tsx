@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSocialStore } from '@/store/socialStore';
+import { useToast } from '@/components/Toast';
 import { Globe, Users, Lock, ChevronDown, Eye } from 'lucide-react';
 import type { Visibility, Photo } from '@/types';
 
@@ -9,6 +10,12 @@ const visOptions: { value: Visibility; label: string; icon: React.ReactNode }[] 
   { value: 'self', label: '仅自己可见', icon: <Lock size={12} /> },
 ];
 
+const visLabelMap: Record<Visibility, string> = {
+  public: '公开',
+  friends: '好友可见',
+  self: '仅自己可见',
+};
+
 interface Props {
   photo: Photo;
   isOwner: boolean;
@@ -16,10 +23,30 @@ interface Props {
 
 export default function PhotoCard({ photo, isOwner }: Props) {
   const { changePhotoVisibility, photos } = useSocialStore();
+  const { showToast } = useToast();
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  // 重新获取最新的photo状态以反映可见性变化
+  const dropRef = useRef<HTMLDivElement>(null);
+
   const currentPhoto = photos.find(p => p.id === photo.id) || photo;
   const currentVis = visOptions.find(v => v.value === currentPhoto.visibility);
+
+  // 点击外部关闭下拉
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [dropdownOpen]);
+
+  const handleVisChange = (newVis: Visibility) => {
+    changePhotoVisibility(currentPhoto.id, newVis);
+    setDropdownOpen(false);
+    showToast(`照片可见性已改为「${visLabelMap[newVis]}」`);
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden group">
@@ -37,7 +64,7 @@ export default function PhotoCard({ photo, isOwner }: Props) {
       <div className="px-3 py-2 flex items-center justify-between">
         <span className="text-xs text-gray-600 truncate">{currentPhoto.label}</span>
         {isOwner ? (
-          <div className="relative">
+          <div ref={dropRef} className="relative">
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
               className="flex items-center gap-0.5 text-[10px] text-gray-400 hover:text-[#3B5998] transition-colors"
@@ -50,10 +77,7 @@ export default function PhotoCard({ photo, isOwner }: Props) {
                 {visOptions.map(opt => (
                   <button
                     key={opt.value}
-                    onClick={() => {
-                      changePhotoVisibility(currentPhoto.id, opt.value);
-                      setDropdownOpen(false);
-                    }}
+                    onClick={() => handleVisChange(opt.value)}
                     className={`w-full flex items-center gap-1.5 px-2 py-1 text-[11px] hover:bg-gray-50 transition-colors ${currentPhoto.visibility === opt.value ? 'text-[#3B5998] font-medium' : 'text-gray-500'}`}
                   >
                     {opt.icon} {opt.label}

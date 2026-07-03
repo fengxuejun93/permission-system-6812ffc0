@@ -12,6 +12,10 @@ export default function Header() {
   const stats = getStats();
   const currentUser = users.find(u => u.id === currentUserId);
 
+  // 从路径中提取 userId 判断是否在看自己主页
+  const profileMatch = location.pathname.match(/^\/profile\/(.+)$/);
+  const viewingOwnProfile = profileMatch ? profileMatch[1] === currentUserId : false;
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropRef.current && !dropRef.current.contains(e.target as Node)) {
@@ -25,7 +29,7 @@ export default function Header() {
   return (
     <header className="bg-[#3B5998] text-white h-14 flex items-center px-4 shadow-md fixed top-0 left-0 right-0 z-50">
       <div className="flex items-center gap-3 mr-8">
-        <div className="text-xl font-bold tracking-wide">校内网</div>
+        <button onClick={() => navigate('/')} className="text-xl font-bold tracking-wide hover:opacity-90 transition-opacity">校内网</button>
         <span className="text-[#8B9DC3] text-xs">Xiaonei</span>
       </div>
 
@@ -44,7 +48,7 @@ export default function Header() {
         </button>
         <button
           onClick={() => navigate(`/profile/${currentUserId}`)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${location.pathname.startsWith('/profile') ? 'bg-[#2A4A7F]' : 'hover:bg-[#2A4A7F]/60'}`}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${viewingOwnProfile ? 'bg-[#2A4A7F]' : 'hover:bg-[#2A4A7F]/60'}`}
         >
           个人主页
         </button>
@@ -52,9 +56,9 @@ export default function Header() {
 
       <div className="flex items-center gap-4 text-sm">
         <div className="flex items-center gap-3 mr-2">
-          <span className="flex items-center gap-1 text-[#B8C9E8]"><Users size={14} /> <b className="text-white">{stats.friendCount}</b></span>
-          <span className="flex items-center gap-1 text-[#B8C9E8]"><FileText size={14} /> <b className="text-white">{stats.postCount}</b></span>
-          <span className="flex items-center gap-1 text-[#B8C9E8]"><Image size={14} /> <b className="text-white">{stats.photoCount}</b></span>
+          <span className="flex items-center gap-1 text-[#B8C9E8]" title="好友数"><Users size={14} /> <b className="text-white">{stats.friendCount}</b></span>
+          <span className="flex items-center gap-1 text-[#B8C9E8]" title="动态数"><FileText size={14} /> <b className="text-white">{stats.postCount}</b></span>
+          <span className="flex items-center gap-1 text-[#B8C9E8]" title="照片数"><Image size={14} /> <b className="text-white">{stats.photoCount}</b></span>
         </div>
 
         <div ref={dropRef} className="relative">

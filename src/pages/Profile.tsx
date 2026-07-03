@@ -1,28 +1,58 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSocialStore } from '@/store/socialStore';
+import { useToast } from '@/components/Toast';
 import Header from '@/components/Header';
 import Avatar from '@/components/Avatar';
 import PostCard from '@/components/PostCard';
 import PhotoCard from '@/components/PhotoCard';
-import { UserPlus, Check, Users, FileText, Image } from 'lucide-react';
+import { UserPlus, Check, Users, FileText, Image, ArrowLeft } from 'lucide-react';
 
 export default function Profile() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
-  const { users, currentUserId, isFriend, addFriend, getVisiblePosts, getVisiblePhotos, getFriendsOf } = useSocialStore();
+  const { users, currentUserId, isFriend, addFriend, getVisiblePosts, getVisiblePhotos, getFriendsOf, posts, photos } = useSocialStore();
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'posts' | 'photos' | 'friends'>('posts');
 
+  // userId 不存在时显示错误状态
+  if (!userId) {
+    return (
+      <div className="min-h-screen bg-[#F0F2F5]">
+        <Header />
+        <div className="pt-20 text-center">
+          <p className="text-gray-400 mb-4">用户ID缺失</p>
+          <button onClick={() => navigate('/')} className="text-sm text-[#3B5998] hover:underline">返回首页</button>
+        </div>
+      </div>
+    );
+  }
+
   const profileUser = users.find(u => u.id === userId);
-  if (!profileUser) return <div className="pt-20 text-center text-gray-400">用户不存在</div>;
+  if (!profileUser) {
+    return (
+      <div className="min-h-screen bg-[#F0F2F5]">
+        <Header />
+        <div className="pt-20 text-center">
+          <p className="text-gray-400 mb-4">用户不存在</p>
+          <button onClick={() => navigate('/')} className="text-sm text-[#3B5998] hover:underline">返回首页</button>
+        </div>
+      </div>
+    );
+  }
 
   const isMe = userId === currentUserId;
   const alreadyFriend = isFriend(userId);
   const visiblePosts = getVisiblePosts(userId);
   const visiblePhotos = getVisiblePhotos(userId);
   const profileFriends = getFriendsOf(userId);
-  const allUserPosts = useSocialStore(s => s.posts.filter(p => p.authorId === userId));
-  const allUserPhotos = useSocialStore(s => s.photos.filter(p => p.ownerId === userId));
+  const allUserPosts = posts.filter(p => p.authorId === userId);
+  const allUserPhotos = photos.filter(p => p.ownerId === userId);
+
+  const handleAddFriend = () => {
+    addFriend(userId);
+    showToast(`已添加 ${profileUser.name} 为好友！`);
+  };
 
   return (
     <div className="min-h-screen bg-[#F0F2F5]">
@@ -50,7 +80,7 @@ export default function Profile() {
                 </div>
               ) : (
                 <button
-                  onClick={() => addFriend(userId)}
+                  onClick={handleAddFriend}
                   className="flex items-center gap-1.5 text-sm bg-white text-[#3B5998] rounded-full px-4 py-2 font-medium hover:bg-gray-100 transition-colors"
                 >
                   <UserPlus size={16} /> 加为好友
@@ -65,13 +95,13 @@ export default function Profile() {
       <div className="max-w-4xl mx-auto px-4 -mt-1">
         <div className="bg-white rounded-b-lg shadow-sm border border-gray-200 border-t-0 px-6 py-3 flex items-center gap-6 text-sm">
           <span className="flex items-center gap-1.5 text-gray-500"><Users size={16} className="text-[#3B5998]" /> <b className="text-gray-800">{profileFriends.length}</b> 好友</span>
-          <span className="flex items-center gap-1.5 text-gray-500"><FileText size={16} className="text-[#3B5998]" /> <b className="text-gray-800">{isMe ? allUserPosts.length : visiblePosts.length}</b> 动态</span>
-          <span className="flex items-center gap-1.5 text-gray-500"><Image size={16} className="text-[#3B5998]" /> <b className="text-gray-800">{isMe ? allUserPhotos.length : visiblePhotos.length}</b> 照片</span>
+          <span className="flex items-center gap-1.5 text-gray-500"><FileText size={16} className="text-[#3B5998]" /> <b className="text-gray-800">{isMe ? allUserPosts.length : visiblePosts.length}</b> 动态{isMe && visiblePosts.length < allUserPosts.length && <span className="text-xs text-gray-400 ml-1">（他人可见 {visiblePosts.length}）</span>}</span>
+          <span className="flex items-center gap-1.5 text-gray-500"><Image size={16} className="text-[#3B5998]" /> <b className="text-gray-800">{isMe ? allUserPhotos.length : visiblePhotos.length}</b> 照片{isMe && visiblePhotos.length < allUserPhotos.length && <span className="text-xs text-gray-400 ml-1">（他人可见 {visiblePhotos.length}）</span>}</span>
         </div>
       </div>
 
       {/* 标签切换 */}
-      <div className="max-w-4xl mx-auto px-4 mt-3">
+      <div className="max-w-4xl mx-auto px-4 mt-3 pb-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="flex border-b border-gray-200">
             {(['posts', 'photos', 'friends'] as const).map(tab => (
@@ -94,7 +124,7 @@ export default function Profile() {
                 ))}
                 {visiblePosts.length === 0 && (
                   <div className="text-center text-gray-400 text-sm py-8">
-                    {isMe ? '暂无动态' : '无法查看该用户的动态'}
+                    {isMe ? '暂无动态，去发布一条吧！' : '无法查看该用户的动态（非好友仅可见公开内容）'}
                   </div>
                 )}
               </div>
@@ -107,7 +137,7 @@ export default function Profile() {
                 ))}
                 {visiblePhotos.length === 0 && (
                   <div className="col-span-3 text-center text-gray-400 text-sm py-8">
-                    {isMe ? '暂无照片' : '无法查看该用户的照片'}
+                    {isMe ? '暂无照片，发布动态时可以附带照片' : '无法查看该用户的照片（非好友仅可见公开内容）'}
                   </div>
                 )}
               </div>
@@ -129,12 +159,22 @@ export default function Profile() {
                   </button>
                 ))}
                 {profileFriends.length === 0 && (
-                  <div className="col-span-2 text-center text-gray-400 text-sm py-8">暂无好友</div>
+                  <div className="col-span-2 text-center text-gray-400 text-sm py-8">
+                    {isMe ? '暂无好友，去搜索添加吧！' : '该用户暂无好友'}
+                  </div>
                 )}
               </div>
             )}
           </div>
         </div>
+
+        {/* 返回按钮 */}
+        <button
+          onClick={() => navigate(-1)}
+          className="mt-4 flex items-center gap-1.5 text-sm text-[#3B5998] hover:underline"
+        >
+          <ArrowLeft size={14} /> 返回上一页
+        </button>
       </div>
     </div>
   );
