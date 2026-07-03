@@ -2,20 +2,111 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSocialStore } from '@/store/socialStore';
 import { useToast } from '@/components/Toast';
+import type { RelationType } from '@/types';
 import Header from '@/components/Header';
 import Avatar from '@/components/Avatar';
 import PostCard from '@/components/PostCard';
 import PhotoCard from '@/components/PhotoCard';
-import { UserPlus, Check, Users, FileText, Image, ArrowLeft } from 'lucide-react';
+import { UserPlus, Check, Users, FileText, Image, ArrowLeft, Clock, XCircle, RotateCcw } from 'lucide-react';
+
+// 好友关系按钮组件
+function FriendButton({ userId, userName }: { userId: string; userName: string }) {
+  const { getRelation, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, rejectFriendRequest } = useSocialStore();
+  const { showToast } = useToast();
+  const relation = getRelation(userId);
+
+  const handleSend = () => {
+    sendFriendRequest(userId);
+    showToast(`已向 ${userName} 发送好友申请`);
+  };
+
+  const handleCancel = () => {
+    cancelFriendRequest(userId);
+    showToast('已取消好友申请');
+  };
+
+  const handleAccept = () => {
+    acceptFriendRequest(userId);
+    showToast(`已通过 ${userName} 的好友申请`);
+  };
+
+  const handleReject = () => {
+    rejectFriendRequest(userId);
+    showToast(`已拒绝 ${userName} 的好友申请`);
+  };
+
+  switch (relation) {
+    case 'friend':
+      return (
+        <div className="flex items-center gap-1.5 text-sm text-white/80 bg-white/10 rounded-full px-4 py-2">
+          <Check size={16} /> 已是好友
+        </div>
+      );
+    case 'pending_sent':
+      return (
+        <div className="flex flex-col items-end gap-1.5">
+          <div className="flex items-center gap-1.5 text-sm text-white/80 bg-white/10 rounded-full px-4 py-2">
+            <Clock size={16} /> 待对方确认
+          </div>
+          <button
+            onClick={handleCancel}
+            className="text-[10px] text-white/50 hover:text-white/80 transition-colors"
+          >
+            取消申请
+          </button>
+        </div>
+      );
+    case 'pending_received':
+      return (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleAccept}
+            className="flex items-center gap-1.5 text-sm bg-white text-[#3B5998] rounded-full px-4 py-2 font-medium hover:bg-gray-100 transition-colors"
+          >
+            <Check size={16} /> 通过
+          </button>
+          <button
+            onClick={handleReject}
+            className="flex items-center gap-1.5 text-sm bg-white/10 text-white/80 rounded-full px-4 py-2 hover:bg-white/20 transition-colors"
+          >
+            <XCircle size={16} /> 拒绝
+          </button>
+        </div>
+      );
+    case 'rejected':
+      return (
+        <div className="flex flex-col items-end gap-1.5">
+          <div className="flex items-center gap-1.5 text-sm text-red-300 bg-red-500/10 rounded-full px-4 py-2">
+            <XCircle size={16} /> 申请被拒
+          </div>
+          <button
+            onClick={handleSend}
+            className="flex items-center gap-1 text-[10px] text-white/50 hover:text-white/80 transition-colors"
+          >
+            <RotateCcw size={10} /> 重新申请
+          </button>
+        </div>
+      );
+    case 'none':
+    default:
+      return (
+        <button
+          onClick={handleSend}
+          className="flex items-center gap-1.5 text-sm bg-white text-[#3B5998] rounded-full px-4 py-2 font-medium hover:bg-gray-100 transition-colors"
+        >
+          <UserPlus size={16} /> 加为好友
+        </button>
+      );
+  }
+}
 
 export default function Profile() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
-  const { users, currentUserId, isFriend, addFriend, getVisiblePosts, getVisiblePhotos, getFriendsOf, posts, photos } = useSocialStore();
+  const { users, currentUserId, isFriend, getVisiblePosts, getVisiblePhotos, getFriendsOf, posts, photos } = useSocialStore();
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'posts' | 'photos' | 'friends'>('posts');
 
-  // userId 不存在时显示错误状态
   if (!userId) {
     return (
       <div className="min-h-screen bg-[#F0F2F5]">
@@ -42,23 +133,18 @@ export default function Profile() {
   }
 
   const isMe = userId === currentUserId;
-  const alreadyFriend = isFriend(userId);
   const visiblePosts = getVisiblePosts(userId);
   const visiblePhotos = getVisiblePhotos(userId);
   const profileFriends = getFriendsOf(userId);
   const allUserPosts = posts.filter(p => p.authorId === userId);
   const allUserPhotos = photos.filter(p => p.ownerId === userId);
-
-  const handleAddFriend = () => {
-    addFriend(userId);
-    showToast(`已添加 ${profileUser.name} 为好友！`);
-  };
+  const hiddenPostCount = allUserPosts.length - visiblePosts.length;
+  const hiddenPhotoCount = allUserPhotos.length - visiblePhotos.length;
 
   return (
     <div className="min-h-screen bg-[#F0F2F5]">
       <Header />
 
-      {/* 封面区 */}
       <div className="bg-gradient-to-r from-[#3B5998] to-[#5B7DC9] pt-14">
         <div className="max-w-4xl mx-auto px-4 py-8 flex items-end gap-5">
           <div
@@ -74,33 +160,30 @@ export default function Profile() {
           </div>
           {!isMe && (
             <div className="mb-2">
-              {alreadyFriend ? (
-                <div className="flex items-center gap-1.5 text-sm text-white/80 bg-white/10 rounded-full px-4 py-2">
-                  <Check size={16} /> 已是好友
-                </div>
-              ) : (
-                <button
-                  onClick={handleAddFriend}
-                  className="flex items-center gap-1.5 text-sm bg-white text-[#3B5998] rounded-full px-4 py-2 font-medium hover:bg-gray-100 transition-colors"
-                >
-                  <UserPlus size={16} /> 加为好友
-                </button>
-              )}
+              <FriendButton userId={userId} userName={profileUser.name} />
             </div>
           )}
         </div>
       </div>
 
-      {/* 统计栏 */}
       <div className="max-w-4xl mx-auto px-4 -mt-1">
         <div className="bg-white rounded-b-lg shadow-sm border border-gray-200 border-t-0 px-6 py-3 flex items-center gap-6 text-sm">
           <span className="flex items-center gap-1.5 text-gray-500"><Users size={16} className="text-[#3B5998]" /> <b className="text-gray-800">{profileFriends.length}</b> 好友</span>
-          <span className="flex items-center gap-1.5 text-gray-500"><FileText size={16} className="text-[#3B5998]" /> <b className="text-gray-800">{isMe ? allUserPosts.length : visiblePosts.length}</b> 动态{isMe && visiblePosts.length < allUserPosts.length && <span className="text-xs text-gray-400 ml-1">（他人可见 {visiblePosts.length}）</span>}</span>
-          <span className="flex items-center gap-1.5 text-gray-500"><Image size={16} className="text-[#3B5998]" /> <b className="text-gray-800">{isMe ? allUserPhotos.length : visiblePhotos.length}</b> 照片{isMe && visiblePhotos.length < allUserPhotos.length && <span className="text-xs text-gray-400 ml-1">（他人可见 {visiblePhotos.length}）</span>}</span>
+          <span className="flex items-center gap-1.5 text-gray-500"><FileText size={16} className="text-[#3B5998]" /> <b className="text-gray-800">{isMe ? allUserPosts.length : visiblePosts.length}</b> 动态</span>
+          <span className="flex items-center gap-1.5 text-gray-500"><Image size={16} className="text-[#3B5998]" /> <b className="text-gray-800">{isMe ? allUserPhotos.length : visiblePhotos.length}</b> 照片</span>
+          {!isMe && (hiddenPostCount > 0 || hiddenPhotoCount > 0) && (
+            <span className="text-xs text-gray-400 ml-auto">
+              因权限不可见：{hiddenPostCount > 0 && `${hiddenPostCount} 条动态`}{hiddenPostCount > 0 && hiddenPhotoCount > 0 && '、'}{hiddenPhotoCount > 0 && `${hiddenPhotoCount} 张照片`}
+            </span>
+          )}
+          {isMe && (hiddenPostCount > 0 || hiddenPhotoCount > 0) && (
+            <span className="text-xs text-gray-400 ml-auto">
+              他人不可见：{hiddenPostCount > 0 && `${hiddenPostCount} 条动态`}{hiddenPostCount > 0 && hiddenPhotoCount > 0 && '、'}{hiddenPhotoCount > 0 && `${hiddenPhotoCount} 张照片`}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* 标签切换 */}
       <div className="max-w-4xl mx-auto px-4 mt-3 pb-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="flex border-b border-gray-200">
@@ -168,7 +251,6 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* 返回按钮 */}
         <button
           onClick={() => navigate(-1)}
           className="mt-4 flex items-center gap-1.5 text-sm text-[#3B5998] hover:underline"

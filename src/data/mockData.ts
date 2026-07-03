@@ -1,4 +1,5 @@
 import type { User, Post, Photo, Comment, Friendship } from '@/types';
+import { generateSampleImageUri } from '@/utils/sampleImages';
 
 export const mockUsers: User[] = [
   { id: 'u1', name: '李明', avatarColor: '#4A90D9', school: '北京大学', className: '计算机08本', signature: '永远相信美好的事情即将发生' },
@@ -11,35 +12,41 @@ export const mockUsers: User[] = [
   { id: 'u8', name: '周婷', avatarColor: '#3498DB', school: '浙江大学', className: '英语08本', signature: 'Reading makes life better.' },
 ];
 
-// u1和u2、u4是好友；u2和u3是好友；u3和u6是好友；u5和u7是好友
+// 好友关系：u1-u2, u1-u4, u1-u5, u2-u3, u3-u6, u5-u7
+// 待处理申请：u6 → u1（u6向u1发了申请，u1待确认）
+// 被拒绝：u8 → u1（u8向u1申请被拒）
 export const mockFriendships: Friendship[] = [
   { userId: 'u1', friendId: 'u2', status: 'accepted' },
   { userId: 'u2', friendId: 'u1', status: 'accepted' },
   { userId: 'u1', friendId: 'u4', status: 'accepted' },
   { userId: 'u4', friendId: 'u1', status: 'accepted' },
+  { userId: 'u1', friendId: 'u5', status: 'accepted' },
+  { userId: 'u5', friendId: 'u1', status: 'accepted' },
   { userId: 'u2', friendId: 'u3', status: 'accepted' },
   { userId: 'u3', friendId: 'u2', status: 'accepted' },
   { userId: 'u3', friendId: 'u6', status: 'accepted' },
   { userId: 'u6', friendId: 'u3', status: 'accepted' },
   { userId: 'u5', friendId: 'u7', status: 'accepted' },
   { userId: 'u7', friendId: 'u5', status: 'accepted' },
-  { userId: 'u1', friendId: 'u5', status: 'accepted' },
-  { userId: 'u5', friendId: 'u1', status: 'accepted' },
+  // u6 向 u1 发送了好友申请（u1待确认）
+  { userId: 'u6', friendId: 'u1', status: 'pending' },
+  // u8 向 u1 发送了好友申请被拒绝
+  { userId: 'u8', friendId: 'u1', status: 'rejected' },
 ];
 
 export const mockPhotos: Photo[] = [
-  { id: 'ph1', ownerId: 'u1', postId: 'p1', color: '#FF6B6B', visibility: 'public', label: '校园晚霞' },
-  { id: 'ph2', ownerId: 'u1', postId: null, color: '#4ECDC4', visibility: 'friends', label: '宿舍生活' },
-  { id: 'ph3', ownerId: 'u1', postId: null, color: '#45B7D1', visibility: 'self', label: '私密日记' },
-  { id: 'ph4', ownerId: 'u2', postId: 'p3', color: '#96CEB4', visibility: 'public', label: '班级聚餐' },
-  { id: 'ph5', ownerId: 'u2', postId: null, color: '#FFEAA7', visibility: 'friends', label: '闺蜜合照' },
-  { id: 'ph6', ownerId: 'u3', postId: 'p4', color: '#DDA0DD', visibility: 'public', label: '清华园春色' },
-  { id: 'ph7', ownerId: 'u3', postId: null, color: '#98D8C8', visibility: 'self', label: '私藏回忆' },
-  { id: 'ph8', ownerId: 'u4', postId: null, color: '#F7DC6F', visibility: 'public', label: '数学之美' },
-  { id: 'ph9', ownerId: 'u5', postId: 'p5', color: '#BB8FCE', visibility: 'friends', label: '新闻实习' },
-  { id: 'ph10', ownerId: 'u6', postId: null, color: '#85C1E9', visibility: 'public', label: '电路实验' },
-  { id: 'ph11', ownerId: 'u7', postId: null, color: '#F0B27A', visibility: 'friends', label: '心理学课堂' },
-  { id: 'ph12', ownerId: 'u8', postId: null, color: '#AED6F1', visibility: 'public', label: '英语角' },
+  { id: 'ph1', ownerId: 'u1', postId: 'p1', color: '#FF6B6B', visibility: 'public', label: '校园晚霞', imageUrl: generateSampleImageUri('#FF6B6B', '校园晚霞', 4) },
+  { id: 'ph2', ownerId: 'u1', postId: 'p2', color: '#4ECDC4', visibility: 'friends', label: '宿舍生活', imageUrl: generateSampleImageUri('#4ECDC4', '宿舍生活', 1) },
+  { id: 'ph3', ownerId: 'u1', postId: 'p6', color: '#45B7D1', visibility: 'self', label: '私密日记', imageUrl: generateSampleImageUri('#45B7D1', '私密日记', 2) },
+  { id: 'ph4', ownerId: 'u2', postId: 'p3', color: '#96CEB4', visibility: 'public', label: '班级聚餐', imageUrl: generateSampleImageUri('#96CEB4', '班级聚餐', 5) },
+  { id: 'ph5', ownerId: 'u2', postId: null, color: '#FFEAA7', visibility: 'friends', label: '闺蜜合照', imageUrl: generateSampleImageUri('#FFEAA7', '闺蜜合照', 1) },
+  { id: 'ph6', ownerId: 'u3', postId: 'p4', color: '#DDA0DD', visibility: 'public', label: '清华园春色', imageUrl: generateSampleImageUri('#DDA0DD', '清华园春色', 4) },
+  { id: 'ph7', ownerId: 'u3', postId: 'p9', color: '#98D8C8', visibility: 'self', label: '私藏回忆', imageUrl: generateSampleImageUri('#98D8C8', '私藏回忆', 3) },
+  { id: 'ph8', ownerId: 'u4', postId: 'p7', color: '#F7DC6F', visibility: 'public', label: '数学之美', imageUrl: generateSampleImageUri('#F7DC6F', '数学之美', 2) },
+  { id: 'ph9', ownerId: 'u5', postId: 'p5', color: '#BB8FCE', visibility: 'friends', label: '新闻实习', imageUrl: generateSampleImageUri('#BB8FCE', '新闻实习', 5) },
+  { id: 'ph10', ownerId: 'u6', postId: 'p8', color: '#85C1E9', visibility: 'public', label: '电路实验', imageUrl: generateSampleImageUri('#85C1E9', '电路实验', 3) },
+  { id: 'ph11', ownerId: 'u7', postId: null, color: '#F0B27A', visibility: 'friends', label: '心理学课堂', imageUrl: generateSampleImageUri('#F0B27A', '心理学课堂', 1) },
+  { id: 'ph12', ownerId: 'u8', postId: null, color: '#AED6F1', visibility: 'public', label: '英语角', imageUrl: generateSampleImageUri('#AED6F1', '英语角', 4) },
 ];
 
 export const mockPosts: Post[] = [

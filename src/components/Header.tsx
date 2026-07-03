@@ -1,5 +1,5 @@
 import { useSocialStore } from '@/store/socialStore';
-import { Users, FileText, Image, Search, Home, ChevronDown } from 'lucide-react';
+import { Users, FileText, Image, Search, Home, ChevronDown, Bell } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -12,7 +12,6 @@ export default function Header() {
   const stats = getStats();
   const currentUser = users.find(u => u.id === currentUserId);
 
-  // 从路径中提取 userId 判断是否在看自己主页
   const profileMatch = location.pathname.match(/^\/profile\/(.+)$/);
   const viewingOwnProfile = profileMatch ? profileMatch[1] === currentUserId : false;
 
@@ -28,7 +27,7 @@ export default function Header() {
 
   return (
     <header className="bg-[#3B5998] text-white h-14 flex items-center px-4 shadow-md fixed top-0 left-0 right-0 z-50">
-      <div className="flex items-center gap-3 mr-8">
+      <div className="flex items-center gap-3 mr-6">
         <button onClick={() => navigate('/')} className="text-xl font-bold tracking-wide hover:opacity-90 transition-opacity">校内网</button>
         <span className="text-[#8B9DC3] text-xs">Xiaonei</span>
       </div>
@@ -55,10 +54,20 @@ export default function Header() {
       </nav>
 
       <div className="flex items-center gap-4 text-sm">
-        <div className="flex items-center gap-3 mr-2">
+        <div className="flex items-center gap-3 mr-1">
           <span className="flex items-center gap-1 text-[#B8C9E8]" title="好友数"><Users size={14} /> <b className="text-white">{stats.friendCount}</b></span>
           <span className="flex items-center gap-1 text-[#B8C9E8]" title="动态数"><FileText size={14} /> <b className="text-white">{stats.postCount}</b></span>
           <span className="flex items-center gap-1 text-[#B8C9E8]" title="照片数"><Image size={14} /> <b className="text-white">{stats.photoCount}</b></span>
+          <span className="flex items-center gap-1 text-[#B8C9E8]" title="评论数"><FileText size={14} /> <b className="text-white">{stats.commentCount}</b></span>
+          {stats.pendingReceivedCount > 0 && (
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-1 text-amber-300 hover:text-amber-200 transition-colors"
+              title={`${stats.pendingReceivedCount} 条待处理好友申请`}
+            >
+              <Bell size={14} /> <b>{stats.pendingReceivedCount}</b>
+            </button>
+          )}
         </div>
 
         <div ref={dropRef} className="relative">

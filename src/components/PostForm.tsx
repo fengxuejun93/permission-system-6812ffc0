@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSocialStore } from '@/store/socialStore';
 import { useToast } from '@/components/Toast';
+import { generateSampleImageUri } from '@/utils/sampleImages';
 import Avatar from './Avatar';
-import { Image, Globe, Users, Lock, ChevronDown, X } from 'lucide-react';
+import { Image, Globe, Users, Lock, ChevronDown, X, Upload } from 'lucide-react';
 import type { Visibility } from '@/types';
 
 const visOptions: { value: Visibility; label: string; icon: React.ReactNode }[] = [
@@ -11,17 +12,25 @@ const visOptions: { value: Visibility; label: string; icon: React.ReactNode }[] 
   { value: 'self', label: '仅自己可见', icon: <Lock size={14} /> },
 ];
 
-const photoColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#BB8FCE', '#F0B27A'];
+// 内置示例图片
+const sampleImages = [
+  { label: '风景', color: '#6BA3D6', pattern: 4 },
+  { label: '美食', color: '#E8915B', pattern: 5 },
+  { label: '校园', color: '#7DB87D', pattern: 1 },
+  { label: '萌宠', color: '#D4A0C0', pattern: 2 },
+];
 
 export default function PostForm() {
   const { currentUserId, addPost } = useSocialStore();
   const { showToast } = useToast();
   const [content, setContent] = useState('');
   const [visibility, setVisibility] = useState<Visibility>('public');
-  const [withPhoto, setWithPhoto] = useState(false);
-  const [photoColor] = useState(() => photoColors[Math.floor(Math.random() * photoColors.length)]);
+  const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
+  const [imageLabel, setImageLabel] = useState('');
+  const [showImagePicker, setShowImagePicker] = useState(false);
   const [visDropdown, setVisDropdown] = useState(false);
   const visDropRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 点击外部关闭可见性下拉
   useEffect(() => {
@@ -36,12 +45,46 @@ export default function PostForm() {
   }, [visDropdown]);
 
   const handleSubmit = () => {
-    if (!content.trim()) return;
-    addPost(content.trim(), visibility, withPhoto);
+    if (!content.trim()) {
+      showToast('请输入动态内容', 'info');
+      return;
+    }
+    addPost(content.trim(), visibility, imageUrl);
     showToast('动态发布成功！');
     setContent('');
-    setWithPhoto(false);
+    setImageUrl(undefined);
+    setImageLabel('');
     setVisibility('public');
+    setShowImagePicker(false);
+  };
+
+  const handleLocalImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('请选择图片文件', 'error');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('图片不能超过5MB', 'error');
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setImageUrl(url);
+    setImageLabel(file.name.replace(/\.[^.]+$/, ''));
+    setShowImagePicker(false);
+  };
+
+  const handleSampleImage = (sample: typeof sampleImages[number]) => {
+    const url = generateSampleImageUri(sample.color, sample.label, sample.pattern);
+    setImageUrl(url);
+    setImageLabel(sample.label);
+    setShowImagePicker(false);
+  };
+
+  const removeImage = () => {
+    setImageUrl(undefined);
+    setImageLabel('');
   };
 
   const currentVis = visOptions.find(v => v.value === visibility);
@@ -59,31 +102,73 @@ export default function PostForm() {
             rows={3}
           />
 
-          {/* 照片占位预览 */}
-          {withPhoto && (
+          {/* 图片预览 */}
+          {imageUrl && (
             <div className="mt-2 relative inline-block">
-              <div
-                className="w-32 h-24 rounded-md flex items-center justify-center"
-                style={{ backgroundColor: photoColor }}
-              >
-                <span className="text-white/80 text-xs font-medium">照片占位</span>
-              </div>
+              <img
+                src={imageUrl}
+                alt={imageLabel || '照片预览'}
+                className="w-48 h-36 rounded-md object-cover"
+              />
+              {imageLabel && (
+                <span className="absolute bottom-1 left-1 text-[10px] bg-black/40 text-white px-1.5 py-0.5 rounded">{imageLabel}</span>
+              )}
               <button
-                onClick={() => setWithPhoto(false)}
-                className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-500 text-white rounded-full flex items-center justify-center hover:bg-gray-700 transition-colors"
+                onClick={removeImage}
+                className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-600 text-white rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors"
               >
                 <X size={12} />
               </button>
             </div>
           )}
 
+          {/* 图片选择面板 */}
+          {showImagePicker && !imageUrl && (
+            <div className="mt-2 bg-gray-50 rounded-lg border border-gray-200 p-3">
+              <div className="text-xs text-gray-500 mb-2">选择图片来源：</div>
+              <div className="flex items-center gap-2 mb-3">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-1.5 text-xs bg-white border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors"
+                >
+                  <Upload size={14} /> 本地图片
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLocalImage}
+                  className="hidden"
+                />
+                <span className="text-[10px] text-gray-400">支持 JPG/PNG，5MB 以内</span>
+              </div>
+              <div className="text-xs text-gray-500 mb-1.5">或选择示例图片：</div>
+              <div className="grid grid-cols-4 gap-2">
+                {sampleImages.map(sample => (
+                  <button
+                    key={sample.label}
+                    onClick={() => handleSampleImage(sample)}
+                    className="group relative"
+                  >
+                    <img
+                      src={generateSampleImageUri(sample.color, sample.label, sample.pattern)}
+                      alt={sample.label}
+                      className="w-full h-14 rounded object-cover border border-gray-200 group-hover:border-[#3B5998] transition-colors"
+                    />
+                    <span className="absolute bottom-0.5 left-0 right-0 text-[9px] text-white text-center">{sample.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between mt-2">
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setWithPhoto(!withPhoto)}
-                className={`flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-full border transition-colors ${withPhoto ? 'bg-green-50 border-green-200 text-green-600' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
+                onClick={() => { if (imageUrl) { removeImage(); } else { setShowImagePicker(!showImagePicker); } }}
+                className={`flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-full border transition-colors ${imageUrl ? 'bg-green-50 border-green-200 text-green-600' : showImagePicker ? 'bg-blue-50 border-blue-200 text-[#3B5998]' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
               >
-                <Image size={14} /> 照片
+                <Image size={14} /> {imageUrl ? '已添加照片' : '添加照片'}
               </button>
               <div ref={visDropRef} className="relative">
                 <button

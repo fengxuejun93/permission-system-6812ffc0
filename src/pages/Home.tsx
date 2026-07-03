@@ -7,16 +7,17 @@ import Avatar from '@/components/Avatar';
 import { useNavigate } from 'react-router-dom';
 
 export default function Home() {
-  const { getVisiblePosts, currentUserId, users, getFriendsOf } = useSocialStore();
+  const { getVisiblePosts, currentUserId, users, getFriendsOf, getRelation } = useSocialStore();
   const posts = getVisiblePosts();
   const currentUser = users.find(u => u.id === currentUserId);
   const friends = getFriendsOf(currentUserId);
   const navigate = useNavigate();
 
-  // 推荐非好友用户
+  // 推荐非好友、非待处理用户
   const nonFriends = users.filter(u => {
     if (u.id === currentUserId) return false;
-    return !friends.some(f => f.id === u.id);
+    const rel = getRelation(u.id);
+    return rel === 'none' || rel === 'rejected';
   });
 
   return (
@@ -38,29 +39,28 @@ export default function Home() {
         </main>
 
         <aside className="w-56 shrink-0 py-4 space-y-3">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="px-4 py-3 border-b border-gray-100">
-              <h3 className="font-semibold text-sm text-gray-800">你可能认识</h3>
+          {nonFriends.length > 0 && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <h3 className="font-semibold text-sm text-gray-800">你可能认识</h3>
+              </div>
+              <div className="py-1">
+                {nonFriends.slice(0, 5).map(user => (
+                  <button
+                    key={user.id}
+                    onClick={() => navigate(`/profile/${user.id}`)}
+                    className="w-full flex items-center gap-2.5 px-4 py-2 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <Avatar userId={user.id} size={32} />
+                    <div className="min-w-0">
+                      <div className="text-sm text-gray-800 truncate">{user.name}</div>
+                      <div className="text-xs text-gray-400 truncate">{user.school}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="py-1">
-              {nonFriends.slice(0, 5).map(user => (
-                <button
-                  key={user.id}
-                  onClick={() => navigate(`/profile/${user.id}`)}
-                  className="w-full flex items-center gap-2.5 px-4 py-2 hover:bg-gray-50 transition-colors text-left"
-                >
-                  <Avatar userId={user.id} size={32} />
-                  <div className="min-w-0">
-                    <div className="text-sm text-gray-800 truncate">{user.name}</div>
-                    <div className="text-xs text-gray-400 truncate">{user.school}</div>
-                  </div>
-                </button>
-              ))}
-              {nonFriends.length === 0 && (
-                <div className="px-4 py-3 text-xs text-gray-400 text-center">已经是全好友了！</div>
-              )}
-            </div>
-          </div>
+          )}
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3 mb-3">

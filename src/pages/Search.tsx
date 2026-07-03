@@ -1,13 +1,76 @@
 import { useState } from 'react';
 import { useSocialStore } from '@/store/socialStore';
 import { useToast } from '@/components/Toast';
+import type { RelationType } from '@/types';
 import Header from '@/components/Header';
 import Avatar from '@/components/Avatar';
-import { Search, UserPlus, Check, Users, AlertCircle } from 'lucide-react';
+import { Search, UserPlus, Check, Users, AlertCircle, Clock, XCircle, RotateCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+// 搜索结果中的好友按钮
+function SearchFriendButton({ userId, userName }: { userId: string; userName: string }) {
+  const { getRelation, sendFriendRequest, cancelFriendRequest } = useSocialStore();
+  const { showToast } = useToast();
+  const relation = getRelation(userId);
+
+  const handleSend = () => {
+    sendFriendRequest(userId);
+    showToast(`已向 ${userName} 发送好友申请`);
+  };
+
+  const handleCancel = () => {
+    cancelFriendRequest(userId);
+    showToast('已取消好友申请');
+  };
+
+  switch (relation) {
+    case 'friend':
+      return (
+        <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 rounded-full px-3 py-1.5">
+          <Check size={14} /> 好友
+        </div>
+      );
+    case 'pending_sent':
+      return (
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 rounded-full px-3 py-1.5">
+            <Clock size={14} /> 待确认
+          </div>
+          <button onClick={handleCancel} className="text-[10px] text-gray-400 hover:text-gray-600">取消申请</button>
+        </div>
+      );
+    case 'pending_received':
+      return (
+        <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 rounded-full px-3 py-1.5">
+          <Clock size={14} /> 待你确认
+        </div>
+      );
+    case 'rejected':
+      return (
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-1 text-xs text-red-500 bg-red-50 rounded-full px-3 py-1.5">
+            <XCircle size={14} /> 被拒
+          </div>
+          <button onClick={handleSend} className="flex items-center gap-0.5 text-[10px] text-gray-400 hover:text-[#3B5998]">
+            <RotateCcw size={8} /> 重新申请
+          </button>
+        </div>
+      );
+    case 'none':
+    default:
+      return (
+        <button
+          onClick={handleSend}
+          className="flex items-center gap-1 text-xs bg-[#3B5998] text-white rounded-full px-3 py-1.5 hover:bg-[#2A4A7F] transition-colors"
+        >
+          <UserPlus size={14} /> 加好友
+        </button>
+      );
+  }
+}
+
 export default function SearchPage() {
-  const { searchUsers, isFriend, addFriend, currentUserId, getFriendsOf } = useSocialStore();
+  const { searchUsers, getFriendsOf, currentUserId } = useSocialStore();
   const { showToast } = useToast();
   const [keyword, setKeyword] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
@@ -27,11 +90,6 @@ export default function SearchPage() {
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSearch();
-  };
-
-  const handleAddFriend = (userId: string, userName: string) => {
-    addFriend(userId);
-    showToast(`已添加 ${userName} 为好友！`);
   };
 
   return (
@@ -67,40 +125,26 @@ export default function SearchPage() {
               <span className="text-sm text-gray-500">找到 {results.length} 位同学</span>
             </div>
             <div className="divide-y divide-gray-100">
-              {results.map(user => {
-                const alreadyFriend = isFriend(user.id);
-                return (
-                  <div key={user.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
-                    <button onClick={() => navigate(`/profile/${user.id}`)} className="shrink-0">
-                      <Avatar userId={user.id} size={48} />
+              {results.map(user => (
+                <div key={user.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+                  <button onClick={() => navigate(`/profile/${user.id}`)} className="shrink-0">
+                    <Avatar userId={user.id} size={48} />
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <button
+                      onClick={() => navigate(`/profile/${user.id}`)}
+                      className="text-sm font-semibold text-[#3B5998] hover:underline"
+                    >
+                      {user.name}
                     </button>
-                    <div className="flex-1 min-w-0">
-                      <button
-                        onClick={() => navigate(`/profile/${user.id}`)}
-                        className="text-sm font-semibold text-[#3B5998] hover:underline"
-                      >
-                        {user.name}
-                      </button>
-                      <div className="text-xs text-gray-500 mt-0.5">{user.school} · {user.className}</div>
-                      <p className="text-xs text-gray-400 mt-0.5 italic truncate">"{user.signature}"</p>
-                    </div>
-                    <div className="shrink-0">
-                      {alreadyFriend ? (
-                        <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 rounded-full px-3 py-1.5">
-                          <Check size={14} /> 好友
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => handleAddFriend(user.id, user.name)}
-                          className="flex items-center gap-1 text-xs bg-[#3B5998] text-white rounded-full px-3 py-1.5 hover:bg-[#2A4A7F] transition-colors"
-                        >
-                          <UserPlus size={14} /> 加好友
-                        </button>
-                      )}
-                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5">{user.school} · {user.className}</div>
+                    <p className="text-xs text-gray-400 mt-0.5 italic truncate">"{user.signature}"</p>
                   </div>
-                );
-              })}
+                  <div className="shrink-0">
+                    <SearchFriendButton userId={user.id} userName={user.name} />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

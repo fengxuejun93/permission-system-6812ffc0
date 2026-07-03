@@ -1,5 +1,9 @@
 export type Visibility = 'public' | 'friends' | 'self';
 
+export type FriendStatus = 'accepted' | 'pending' | 'rejected';
+
+export type RelationType = 'self' | 'friend' | 'pending_sent' | 'pending_received' | 'rejected' | 'none';
+
 export interface User {
   id: string;
   name: string;
@@ -25,6 +29,7 @@ export interface Photo {
   color: string;
   visibility: Visibility;
   label: string;
+  imageUrl?: string;
 }
 
 export interface Comment {
@@ -39,5 +44,5 @@ export interface Comment {
 export interface Friendship {
   userId: string;
   friendId: string;
-  status: 'accepted' | 'pending';
+  status: FriendStatus;
 }

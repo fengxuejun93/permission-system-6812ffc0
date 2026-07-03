@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSocialStore } from '@/store/socialStore';
 import { useToast } from '@/components/Toast';
-import { Globe, Users, Lock, ChevronDown, Eye } from 'lucide-react';
+import { Globe, Users, Lock, ChevronDown, Eye, EyeOff } from 'lucide-react';
 import type { Visibility, Photo } from '@/types';
 
 const visOptions: { value: Visibility; label: string; icon: React.ReactNode }[] = [
@@ -30,7 +30,6 @@ export default function PhotoCard({ photo, isOwner }: Props) {
   const currentPhoto = photos.find(p => p.id === photo.id) || photo;
   const currentVis = visOptions.find(v => v.value === currentPhoto.visibility);
 
-  // 点击外部关闭下拉
   useEffect(() => {
     if (!dropdownOpen) return;
     const handler = (e: MouseEvent) => {
@@ -45,19 +44,29 @@ export default function PhotoCard({ photo, isOwner }: Props) {
   const handleVisChange = (newVis: Visibility) => {
     changePhotoVisibility(currentPhoto.id, newVis);
     setDropdownOpen(false);
-    showToast(`照片可见性已改为「${visLabelMap[newVis]}」`);
+    showToast(`照片「${currentPhoto.label}」可见性已改为「${visLabelMap[newVis]}」`);
   };
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden group">
-      <div
-        className="w-full h-36 flex items-center justify-center relative"
-        style={{ backgroundColor: currentPhoto.color }}
-      >
-        <span className="text-white/80 text-sm font-medium">{currentPhoto.label}</span>
+      <div className="w-full h-36 relative">
+        {currentPhoto.imageUrl ? (
+          <img src={currentPhoto.imageUrl} alt={currentPhoto.label} className="w-full h-full object-cover" />
+        ) : (
+          <div
+            className="w-full h-full flex items-center justify-center"
+            style={{ backgroundColor: currentPhoto.color }}
+          >
+            <span className="text-white/80 text-sm font-medium">{currentPhoto.label}</span>
+          </div>
+        )}
         {isOwner && (
-          <div className="absolute top-2 right-2">
-            <Eye size={14} className="text-white/60" />
+          <div className="absolute top-2 right-2 bg-black/30 rounded-full p-1">
+            {currentPhoto.visibility === 'self' ? (
+              <EyeOff size={12} className="text-white/80" />
+            ) : (
+              <Eye size={12} className="text-white/80" />
+            )}
           </div>
         )}
       </div>
