@@ -2,7 +2,7 @@ import { useSocialStore } from '@/store/socialStore';
 import { useToast } from '@/components/Toast';
 import Avatar from './Avatar';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, Bell, Clock, X } from 'lucide-react';
+import { UserPlus, Bell, Clock, X, Users } from 'lucide-react';
 
 export default function Sidebar() {
   const { currentUserId, getFriendsOf, getRelation, getPendingReceived, getPendingSent, users, acceptFriendRequest, rejectFriendRequest, cancelFriendRequest } = useSocialStore();
@@ -145,12 +145,18 @@ export default function Sidebar() {
             <div className="px-4 py-6 text-center text-sm text-gray-400">暂无好友</div>
           )}
         </div>
-        <div className="px-4 py-2 border-t border-gray-100">
+        <div className="px-4 py-2 border-t border-gray-100 space-y-1.5">
           <button
-            onClick={() => navigate('/search')}
+            onClick={() => navigate('/classmates')}
             className="w-full flex items-center justify-center gap-1.5 text-sm text-[#3B5998] hover:underline py-1"
           >
-            <UserPlus size={14} /> 搜索添加好友
+            <Users size={14} /> 同学录
+          </button>
+          <button
+            onClick={() => navigate('/search')}
+            className="w-full flex items-center justify-center gap-1.5 text-xs text-gray-400 hover:text-[#3B5998] py-0.5"
+          >
+            <UserPlus size={12} /> 搜索添加好友
           </button>
         </div>
       </div>

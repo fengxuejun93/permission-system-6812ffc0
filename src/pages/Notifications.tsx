@@ -48,6 +48,8 @@ export default function Notifications() {
     activityLogs,
     acceptFriendRequest,
     rejectFriendRequest,
+    acceptAllFriendRequests,
+    rejectAllFriendRequests,
     cancelFriendRequest,
     getStats,
     getFriendsOf,
@@ -57,6 +59,8 @@ export default function Notifications() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabKey>('dashboard');
   const [showClearLogDialog, setShowClearLogDialog] = useState(false);
+  const [showAcceptAllDialog, setShowAcceptAllDialog] = useState(false);
+  const [showRejectAllDialog, setShowRejectAllDialog] = useState(false);
 
   const pendingReceived = getPendingReceived();
   const pendingSent = getPendingSent();
@@ -222,6 +226,22 @@ export default function Notifications() {
                     <h2 className="text-sm font-semibold text-gray-600 mb-2 flex items-center gap-1.5">
                       <UserPlus size={14} className="text-[#3B5998]" /> 好友申请
                       <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">{pendingReceived.length}</span>
+                      {pendingReceived.length > 1 && (
+                        <div className="ml-auto flex gap-1.5">
+                          <button
+                            onClick={() => setShowAcceptAllDialog(true)}
+                            className="text-[10px] bg-[#3B5998] text-white rounded-full px-2.5 py-1 hover:bg-[#2A4A7F] transition-colors"
+                          >
+                            全部通过
+                          </button>
+                          <button
+                            onClick={() => setShowRejectAllDialog(true)}
+                            className="text-[10px] bg-gray-200 text-gray-600 rounded-full px-2.5 py-1 hover:bg-gray-300 transition-colors"
+                          >
+                            全部拒绝
+                          </button>
+                        </div>
+                      )}
                     </h2>
                     <div className="space-y-2">
                       {pendingReceived.map(req => {
@@ -398,6 +418,33 @@ export default function Notifications() {
         danger
         onConfirm={() => { clearActivityLogs(); showToast('日志已清空'); setShowClearLogDialog(false); }}
         onCancel={() => setShowClearLogDialog(false)}
+      />
+
+      <ConfirmDialog
+        open={showAcceptAllDialog}
+        title="批量通过好友申请"
+        message={`确定要通过全部 ${pendingReceived.length} 条好友申请吗？`}
+        confirmLabel="全部通过"
+        onConfirm={() => {
+          const count = acceptAllFriendRequests();
+          showToast(`已通过 ${count} 条好友申请`);
+          setShowAcceptAllDialog(false);
+        }}
+        onCancel={() => setShowAcceptAllDialog(false)}
+      />
+
+      <ConfirmDialog
+        open={showRejectAllDialog}
+        title="批量拒绝好友申请"
+        message={`确定要拒绝全部 ${pendingReceived.length} 条好友申请吗？此操作不可恢复。`}
+        confirmLabel="全部拒绝"
+        danger
+        onConfirm={() => {
+          const count = rejectAllFriendRequests();
+          showToast(`已拒绝 ${count} 条好友申请`);
+          setShowRejectAllDialog(false);
+        }}
+        onCancel={() => setShowRejectAllDialog(false)}
       />
     </div>
   );

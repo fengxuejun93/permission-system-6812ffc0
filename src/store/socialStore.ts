@@ -61,6 +61,12 @@ interface SocialState {
   getMutualFriends: (userId: string) => User[];
   getActivityLogs: () => ActivityLog[];
   clearActivityLogs: () => void;
+
+  // 批量操作
+  acceptAllFriendRequests: () => number;
+  rejectAllFriendRequests: () => number;
+  batchSendFriendRequests: (userIds: string[]) => { sent: number; skipped: number };
+  getClassmateStats: () => { total: number; friends: number; pendingSent: number; pendingReceived: number; none: number; online: number };
 }
 
 const generateId = (prefix: string) => `${prefix}${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
@@ -505,5 +511,93 @@ export const useSocialStore = create<SocialState>((set, get) => ({
 
   clearActivityLogs: () => {
     set({ activityLogs: [] });
+  },
+
+  acceptAllFriendRequests: () => {
+    const state = get();
+    const pendingReceived = state.getPendingReceived();
+    if (pendingReceived.length === 0) return 0;
+    const receivedUserIds = new Set(pendingReceived.map(r => r.userId));
+    // 批量更新所有 pending → accepted
+    const updated = state.friendships.map(f => {
+      if (f.friendId === state.currentUserId && f.status === 'pending') {
+        return { ...f, status: 'accepted' as const };
+      }
+      // 同步更新反向记录
+      if (f.userId === state.currentUserId && receivedUserIds.has(f.friendId) && f.status !== 'accepted') {
+        return { ...f, status: 'accepted' as const };
+      }
+      return f;
+    });
+    // 补缺失的反向记录
+    const existingReverse = new Set(updated.filter(f => f.userId === state.currentUserId).map(f => f.friendId));
+    for (const req of pendingReceived) {
+      if (!existingReverse.has(req.userId)) {
+        updated.push({ userId: state.currentUserId, friendId: req.userId, status: 'accepted' });
+      }
+    }
+    set({ friendships: updated });
+    const count = pendingReceived.length;
+    logActivity(set, get, 'accept_friend_request', 'batch', `${count}人`, `批量通过 ${count} 条好友申请`);
+    return count;
+  },
+
+  rejectAllFriendRequests: () => {
+    const state = get();
+    const pendingReceived = state.getPendingReceived();
+    if (pendingReceived.length === 0) return 0;
+    const updated = state.friendships.map(f => {
+      if (f.friendId === state.currentUserId && f.status === 'pending') {
+        return { ...f, status: 'rejected' as const };
+      }
+      return f;
+    });
+    set({ friendships: updated });
+    const count = pendingReceived.length;
+    logActivity(set, get, 'reject_friend_request', 'batch', `${count}人`, `批量拒绝 ${count} 条好友申请`);
+    return count;
+  },
+
+  batchSendFriendRequests: (userIds: string[]) => {
+    const state = get();
+    let sent = 0;
+    let skipped = 0;
+    const newFriendships = [...state.friendships];
+    for (const uid of userIds) {
+      const rel = get().getRelation(uid);
+      if (rel !== 'none' && rel !== 'rejected' && rel !== 'rejected_them') {
+        skipped++;
+        continue;
+      }
+      // 清理双方 rejected 记录
+      const filtered = newFriendships.filter(
+        f => !((f.userId === state.currentUserId && f.friendId === uid && f.status === 'rejected') ||
+               (f.userId === uid && f.friendId === state.currentUserId && f.status === 'rejected'))
+      );
+      filtered.push({ userId: state.currentUserId, friendId: uid, status: 'pending' });
+      newFriendships.length = 0;
+      newFriendships.push(...filtered);
+      sent++;
+    }
+    if (sent > 0) {
+      set({ friendships: [...newFriendships] });
+      logActivity(set, get, 'send_friend_request', 'batch', `${sent}人`, `批量发送 ${sent} 条好友申请${skipped > 0 ? `，跳过 ${skipped} 条` : ''}`);
+    }
+    return { sent, skipped };
+  },
+
+  getClassmateStats: () => {
+    const state = get();
+    const others = state.users.filter(u => u.id !== state.currentUserId);
+    let friends = 0, pendingSent = 0, pendingReceived = 0, none = 0, online = 0;
+    for (const u of others) {
+      const r = state.getRelation(u.id);
+      if (r === 'friend') friends++;
+      else if (r === 'pending_sent') pendingSent++;
+      else if (r === 'pending_received') pendingReceived++;
+      else none++;
+      if (u.online) online++;
+    }
+    return { total: others.length, friends, pendingSent, pendingReceived, none, online };
   },
 }));

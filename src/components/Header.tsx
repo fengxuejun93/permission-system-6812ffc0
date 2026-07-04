@@ -47,6 +47,12 @@ export default function Header() {
           <Search size={16} /> 搜索同学
         </button>
         <button
+          onClick={() => navigate('/classmates')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${location.pathname === '/classmates' ? 'bg-[#2A4A7F]' : 'hover:bg-[#2A4A7F]/60'}`}
+        >
+          <Users size={16} /> 同学录
+        </button>
+        <button
           onClick={() => navigate('/knowledge')}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${location.pathname === '/knowledge' ? 'bg-[#2A4A7F]' : 'hover:bg-[#2A4A7F]/60'}`}
         >
