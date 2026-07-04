@@ -2,7 +2,7 @@ export type Visibility = 'public' | 'friends' | 'self';
 
 export type FriendStatus = 'accepted' | 'pending' | 'rejected';
 
-export type RelationType = 'self' | 'friend' | 'pending_sent' | 'pending_received' | 'rejected' | 'none';
+export type RelationType = 'self' | 'friend' | 'pending_sent' | 'pending_received' | 'rejected' | 'rejected_them' | 'none';
 
 export type ArticleCategory = 'mental_health' | 'fashion' | 'cooking' | 'hot_topics';
 

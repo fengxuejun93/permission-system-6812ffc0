@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useSocialStore } from '@/store/socialStore';
 import Header from '@/components/Header';
 import Avatar from '@/components/Avatar';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import {
   Bell, UserPlus, Check, XCircle, MessageSquare, Clock,
   Activity, FileText, Trash2, Users, Image, Pencil, Lock,
@@ -9,7 +11,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/Toast';
 import type { ActivityAction } from '@/types';
-import { useState } from 'react';
 
 // 操作类型标签配置
 const ACTION_CONFIG: Record<ActivityAction, { label: string; color: string; icon: React.ReactNode }> = {
@@ -36,6 +37,7 @@ export default function Notifications() {
   const {
     currentUserId,
     users,
+    getRelation,
     getPendingReceived,
     getPendingSent,
     comments,
@@ -54,6 +56,7 @@ export default function Notifications() {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabKey>('dashboard');
+  const [showClearLogDialog, setShowClearLogDialog] = useState(false);
 
   const pendingReceived = getPendingReceived();
   const pendingSent = getPendingSent();
@@ -67,11 +70,21 @@ export default function Notifications() {
   );
 
   const handleAccept = (userId: string, name: string) => {
+    const rel = getRelation(userId);
+    if (rel !== 'pending_received') {
+      showToast('该申请已处理', 'info');
+      return;
+    }
     acceptFriendRequest(userId);
     showToast(`已通过 ${name} 的好友申请`);
   };
 
   const handleReject = (userId: string, name: string) => {
+    const rel = getRelation(userId);
+    if (rel !== 'pending_received') {
+      showToast('该申请已处理', 'info');
+      return;
+    }
     rejectFriendRequest(userId);
     showToast(`已拒绝 ${name} 的好友申请`);
   };
@@ -324,7 +337,7 @@ export default function Notifications() {
                   </div>
                   {activityLogs.length > 0 && (
                     <button
-                      onClick={() => { clearActivityLogs(); showToast('日志已清空'); }}
+                      onClick={() => setShowClearLogDialog(true)}
                       className="text-[10px] text-gray-400 hover:text-red-500 transition-colors flex items-center gap-0.5"
                     >
                       <Trash2 size={10} /> 清空日志
@@ -376,6 +389,16 @@ export default function Notifications() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={showClearLogDialog}
+        title="清空日志"
+        message="确定要清空所有操作日志吗？此操作不可恢复。"
+        confirmLabel="清空"
+        danger
+        onConfirm={() => { clearActivityLogs(); showToast('日志已清空'); setShowClearLogDialog(false); }}
+        onCancel={() => setShowClearLogDialog(false)}
+      />
     </div>
   );
 }

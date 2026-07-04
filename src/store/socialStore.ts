@@ -8,6 +8,7 @@ interface Stats {
   postCount: number;
   photoCount: number;
   pendingReceivedCount: number;
+  pendingSentCount: number;
   commentCount: number;
   articleCount: number;
 }
@@ -110,7 +111,10 @@ export const useSocialStore = create<SocialState>((set, get) => ({
     if (fs.some(f => f.userId === state.currentUserId && f.friendId === userId && f.status === 'accepted')) return 'friend';
     if (fs.some(f => f.userId === state.currentUserId && f.friendId === userId && f.status === 'pending')) return 'pending_sent';
     if (fs.some(f => f.userId === userId && f.friendId === state.currentUserId && f.status === 'pending')) return 'pending_received';
+    // 我发出的申请被拒
     if (fs.some(f => f.userId === state.currentUserId && f.friendId === userId && f.status === 'rejected')) return 'rejected';
+    // 我拒绝了对方的申请
+    if (fs.some(f => f.userId === userId && f.friendId === state.currentUserId && f.status === 'rejected')) return 'rejected_them';
     return 'none';
   },
 
@@ -203,12 +207,14 @@ export const useSocialStore = create<SocialState>((set, get) => ({
     const myPosts = state.posts.filter(p => p.authorId === state.currentUserId);
     const myPhotos = state.photos.filter(p => p.ownerId === state.currentUserId);
     const pendingReceived = state.getPendingReceived();
+    const pendingSent = state.getPendingSent();
     const myComments = state.comments.filter(c => c.authorId === state.currentUserId);
     return {
       friendCount: friends.length,
       postCount: myPosts.length,
       photoCount: myPhotos.length,
       pendingReceivedCount: pendingReceived.length,
+      pendingSentCount: pendingSent.length,
       commentCount: myComments.length,
       articleCount: state.articles.filter(a => a.authorId === state.currentUserId).length,
     };
@@ -287,10 +293,12 @@ export const useSocialStore = create<SocialState>((set, get) => ({
     const state = get();
     const user = state.users.find(u => u.id === userId);
     const oldUser = state.users.find(u => u.id === state.currentUserId);
-    set({ currentUserId: userId });
+    // 先记录日志（此时 currentUserId 还是旧用户）
     if (user && oldUser && userId !== state.currentUserId) {
       logActivity(set, get, 'switch_user', userId, user.name, `切换账号：${oldUser.name} → ${user.name}`);
     }
+    // 再更新状态
+    set({ currentUserId: userId });
   },
 
   addPost: (content: string, visibility: Visibility, imageUrl?: string, photoLabel?: string) => {
@@ -344,10 +352,12 @@ export const useSocialStore = create<SocialState>((set, get) => ({
   sendFriendRequest: (friendId: string) => {
     const state = get();
     const relation = state.getRelation(friendId);
-    if (relation !== 'none' && relation !== 'rejected') return;
+    if (relation !== 'none' && relation !== 'rejected' && relation !== 'rejected_them') return;
     const targetUser = state.users.find(u => u.id === friendId);
+    // 清理双方所有 rejected 记录
     const filtered = state.friendships.filter(
-      f => !(f.userId === state.currentUserId && f.friendId === friendId && f.status === 'rejected')
+      f => !((f.userId === state.currentUserId && f.friendId === friendId && f.status === 'rejected') ||
+             (f.userId === friendId && f.friendId === state.currentUserId && f.status === 'rejected'))
     );
     const newRequest: Friendship = {
       userId: state.currentUserId,
@@ -365,12 +375,19 @@ export const useSocialStore = create<SocialState>((set, get) => ({
     );
     if (!target) return;
     const senderUser = state.users.find(u => u.id === userId);
-    const updated = state.friendships.map(
-      f => (f.userId === userId && f.friendId === state.currentUserId && f.status === 'pending')
-        ? { ...f, status: 'accepted' as const }
-        : f
-    );
-    const hasReverse = updated.some(f => f.userId === state.currentUserId && f.friendId === userId);
+    // 将对方发来的 pending 改为 accepted，同时将任何旧的反向记录也更新为 accepted
+    const updated = state.friendships.map(f => {
+      if (f.userId === userId && f.friendId === state.currentUserId && f.status === 'pending') {
+        return { ...f, status: 'accepted' as const };
+      }
+      // 如果有旧的反向记录（rejected等），也更新为 accepted
+      if (f.userId === state.currentUserId && f.friendId === userId && f.status !== 'accepted') {
+        return { ...f, status: 'accepted' as const };
+      }
+      return f;
+    });
+    // 确保反向记录存在
+    const hasReverse = updated.some(f => f.userId === state.currentUserId && f.friendId === userId && f.status === 'accepted');
     if (!hasReverse) {
       updated.push({ userId: state.currentUserId, friendId: userId, status: 'accepted' });
     }

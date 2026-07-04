@@ -41,7 +41,7 @@ function SearchFriendButton({ userId, userName }: { userId: string; userName: st
   const handleSend = () => {
     // 防止重复操作
     const currentRel = getRelation(userId);
-    if (currentRel !== 'none' && currentRel !== 'rejected') {
+    if (currentRel !== 'none' && currentRel !== 'rejected' && currentRel !== 'rejected_them') {
       showToast('当前状态不允许发送好友申请', 'info');
       return;
     }
@@ -104,6 +104,17 @@ function SearchFriendButton({ userId, userName }: { userId: string; userName: st
         <div className="flex flex-col items-end gap-1">
           <div className="flex items-center gap-1 text-xs text-red-500 bg-red-50 rounded-full px-3 py-1.5">
             <XCircle size={14} /> 被拒
+          </div>
+          <button onClick={handleSend} className="flex items-center gap-0.5 text-[10px] text-gray-400 hover:text-[#3B5998]">
+            <RotateCcw size={8} /> 重新申请
+          </button>
+        </div>
+      );
+    case 'rejected_them':
+      return (
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-1 text-xs text-orange-500 bg-orange-50 rounded-full px-3 py-1.5">
+            <XCircle size={14} /> 已拒
           </div>
           <button onClick={handleSend} className="flex items-center gap-0.5 text-[10px] text-gray-400 hover:text-[#3B5998]">
             <RotateCcw size={8} /> 重新申请
@@ -292,7 +303,7 @@ export default function SearchPage() {
       case 'suggested':
         list = list.filter(u => {
           const r = getRelation(u.id);
-          return r === 'none' || r === 'rejected';
+          return r === 'none' || r === 'rejected' || r === 'rejected_them';
         });
         break;
       case 'photoActive':
@@ -320,7 +331,7 @@ export default function SearchPage() {
       case 'suggested':
         list = list.filter(u => {
           const r = getRelation(u.id);
-          return r === 'none' || r === 'rejected';
+          return r === 'none' || r === 'rejected' || r === 'rejected_them';
         });
         break;
       case 'photoActive':
@@ -381,8 +392,8 @@ export default function SearchPage() {
     ? results.filter(u => { const r = getRelation(u.id); return r === 'pending_sent' || r === 'pending_received'; }).length
     : pendingReceived.length + pendingSent.length;
   const suggestedCount = hasSearched
-    ? results.filter(u => { const r = getRelation(u.id); return r === 'none' || r === 'rejected'; }).length
-    : users.filter(u => u.id !== currentUserId && (getRelation(u.id) === 'none' || getRelation(u.id) === 'rejected')).length;
+    ? results.filter(u => { const r = getRelation(u.id); return r === 'none' || r === 'rejected' || r === 'rejected_them'; }).length
+    : users.filter(u => u.id !== currentUserId && (getRelation(u.id) === 'none' || getRelation(u.id) === 'rejected' || getRelation(u.id) === 'rejected_them')).length;
   const photoActiveCount = hasSearched
     ? results.filter(u => photos.some(p => p.ownerId === u.id)).length
     : users.filter(u => u.id !== currentUserId && photos.some(p => p.ownerId === u.id)).length;
@@ -613,8 +624,8 @@ export default function SearchPage() {
               <div className="py-6 text-center">
                 <AlertCircle size={24} className="text-gray-300 mx-auto mb-1.5" />
                 <p className="text-gray-400 text-xs">
-                  {postVisFilter === 'self' && currentUserId !== users.find(u => u.id === currentUserId)?.id
-                    ? '仅自己可见的动态需要切换到内容所有者账号才能看到'
+                  {postVisFilter === 'self'
+                    ? '仅自己可见的动态只有作者本人能看到，切换到对应账号试试'
                     : postVisFilter !== 'all_visible'
                       ? `当前筛选「${POST_VIS_FILTERS.find(f => f.key === postVisFilter)?.label}」无匹配动态`
                       : postKeyword

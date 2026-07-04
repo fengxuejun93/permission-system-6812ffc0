@@ -11,6 +11,7 @@ export default function Header() {
   const dropRef = useRef<HTMLDivElement>(null);
   const stats = getStats();
   const currentUser = users.find(u => u.id === currentUserId);
+  const totalPending = stats.pendingReceivedCount + stats.pendingSentCount;
 
   const profileMatch = location.pathname.match(/^\/profile\/(.+)$/);
   const viewingOwnProfile = profileMatch ? profileMatch[1] === currentUserId : false;
@@ -66,16 +67,15 @@ export default function Header() {
           <span className="flex items-center gap-1 text-[#B8C9E8]" title="照片数"><Image size={14} /> <b className="text-white">{stats.photoCount}</b></span>
           <span className="flex items-center gap-1 text-[#B8C9E8]" title="评论数"><FileText size={14} /> <b className="text-white">{stats.commentCount}</b></span>
           <span className="flex items-center gap-1 text-[#B8C9E8]" title="文章数"><BookOpen size={14} /> <b className="text-white">{stats.articleCount}</b></span>
-          {stats.pendingReceivedCount > 0 && (
+          {totalPending > 0 ? (
             <button
               onClick={() => navigate('/notifications')}
               className="flex items-center gap-1 text-amber-300 hover:text-amber-200 transition-colors"
-              title={`${stats.pendingReceivedCount} 条待处理好友申请`}
+              title={`${stats.pendingReceivedCount} 条待处理好友申请${stats.pendingSentCount > 0 ? `，${stats.pendingSentCount} 条已发出` : ''}`}
             >
-              <Bell size={14} /> <b>{stats.pendingReceivedCount}</b>
+              <Bell size={14} /> <b>{totalPending}</b>
             </button>
-          )}
-          {stats.pendingReceivedCount === 0 && (
+          ) : (
             <button
               onClick={() => navigate('/notifications')}
               className="flex items-center gap-1 text-[#8B9DC3] hover:text-white transition-colors"

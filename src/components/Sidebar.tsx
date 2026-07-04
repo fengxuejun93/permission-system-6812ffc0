@@ -2,10 +2,10 @@ import { useSocialStore } from '@/store/socialStore';
 import { useToast } from '@/components/Toast';
 import Avatar from './Avatar';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, Bell, Check, XCircle } from 'lucide-react';
+import { UserPlus, Bell, Clock, X } from 'lucide-react';
 
 export default function Sidebar() {
-  const { currentUserId, getFriendsOf, getPendingReceived, getPendingSent, users, acceptFriendRequest, rejectFriendRequest, getRelation } = useSocialStore();
+  const { currentUserId, getFriendsOf, getRelation, getPendingReceived, getPendingSent, users, acceptFriendRequest, rejectFriendRequest, cancelFriendRequest } = useSocialStore();
   const { showToast } = useToast();
   const friends = getFriendsOf(currentUserId);
   const pendingReceived = getPendingReceived();
@@ -13,13 +13,29 @@ export default function Sidebar() {
   const navigate = useNavigate();
 
   const handleAccept = (userId: string, userName: string) => {
+    const rel = getRelation(userId);
+    if (rel !== 'pending_received') {
+      showToast('该申请已处理', 'info');
+      return;
+    }
     acceptFriendRequest(userId);
     showToast(`已通过 ${userName} 的好友申请`);
   };
 
   const handleReject = (userId: string, userName: string) => {
+    const rel = getRelation(userId);
+    if (rel !== 'pending_received') {
+      showToast('该申请已处理', 'info');
+      return;
+    }
     rejectFriendRequest(userId);
     showToast(`已拒绝 ${userName} 的好友申请`);
+  };
+
+  const handleCancel = (friendId: string) => {
+    const target = users.find(u => u.id === friendId);
+    cancelFriendRequest(friendId);
+    showToast(`已取消对 ${target?.name || friendId} 的好友申请`);
   };
 
   return (
@@ -72,7 +88,7 @@ export default function Sidebar() {
       {pendingSent.length > 0 && (
         <div className="bg-blue-50 rounded-lg shadow-sm border border-blue-200 mb-3">
           <div className="px-4 py-2.5 border-b border-blue-200 flex items-center gap-1.5">
-            <UserPlus size={14} className="text-blue-500" />
+            <Clock size={14} className="text-blue-500" />
             <h3 className="font-semibold text-sm text-blue-700">待确认</h3>
             <span className="text-xs text-blue-500 ml-auto">{pendingSent.length}</span>
           </div>
@@ -90,6 +106,13 @@ export default function Sidebar() {
                       <div className="text-xs font-medium text-gray-800 truncate">{target.name}</div>
                       <div className="text-[10px] text-gray-400 truncate">等待对方确认</div>
                     </div>
+                    <button
+                      onClick={() => handleCancel(target.id)}
+                      className="text-[10px] text-gray-400 hover:text-red-400 transition-colors shrink-0"
+                      title="取消申请"
+                    >
+                      <X size={12} />
+                    </button>
                   </div>
                 </div>
               );

@@ -6,7 +6,7 @@ import PostForm from '@/components/PostForm';
 import PostCard from '@/components/PostCard';
 import Avatar from '@/components/Avatar';
 import { useNavigate } from 'react-router-dom';
-import { Clock, UserPlus, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 export default function Home() {
   const { getVisiblePosts, currentUserId, users, getFriendsOf, getRelation } = useSocialStore();
@@ -20,6 +20,7 @@ export default function Home() {
   const pendingSent: typeof users = [];
   const pendingReceived: typeof users = [];
   const rejected: typeof users = [];
+  const rejectedThem: typeof users = [];
   const none: typeof users = [];
 
   users.forEach(u => {
@@ -30,6 +31,7 @@ export default function Home() {
       case 'pending_sent': pendingSent.push(u); break;
       case 'pending_received': pendingReceived.push(u); break;
       case 'rejected': rejected.push(u); break;
+      case 'rejected_them': rejectedThem.push(u); break;
       default: none.push(u); break;
     }
   });
@@ -129,13 +131,13 @@ export default function Home() {
           )}
 
           {/* 你可能认识 */}
-          {(none.length > 0 || rejected.length > 0) && (
+          {(none.length > 0 || rejected.length > 0 || rejectedThem.length > 0) && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="px-4 py-3 border-b border-gray-100">
                 <h3 className="font-semibold text-sm text-gray-800">你可能认识</h3>
               </div>
               <div className="py-1">
-                {[...none, ...rejected].slice(0, 5).map(user => (
+                {[...none, ...rejected, ...rejectedThem].slice(0, 5).map(user => (
                   <button
                     key={user.id}
                     onClick={() => navigate(`/profile/${user.id}`)}
@@ -148,6 +150,9 @@ export default function Home() {
                     </div>
                     {getRelation(user.id) === 'rejected' && (
                       <span className="text-[9px] text-gray-300 shrink-0">曾被拒</span>
+                    )}
+                    {getRelation(user.id) === 'rejected_them' && (
+                      <span className="text-[9px] text-orange-300 shrink-0">已拒绝</span>
                     )}
                   </button>
                 ))}

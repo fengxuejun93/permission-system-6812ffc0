@@ -7,7 +7,7 @@ import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/types';
 import type { Article, ArticleCategory, Visibility } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { Globe, Users, Lock, Trash2, Tag, MoreHorizontal, Pencil, X, Check } from 'lucide-react';
-import { useState as useReactState, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 
 const visLabel = (v: Visibility) => {
   switch (v) {
