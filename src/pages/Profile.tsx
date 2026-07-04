@@ -277,7 +277,7 @@ export default function Profile() {
 
       <div className="max-w-4xl mx-auto px-4 mt-3 pb-6">
         {/* 共同好友和最近评论区域 */}
-        {!isMe && (mutualFriends.length > 0 || recentComments.length > 0) && (
+        {((!isMe && mutualFriends.length > 0) || (!isMe && recentComments.length > 0)) ? (
           <div className="grid grid-cols-2 gap-3 mb-3">
             {mutualFriends.length > 0 && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
@@ -324,7 +324,13 @@ export default function Profile() {
               </div>
             )}
           </div>
-        )}
+        ) : !isMe && mutualFriends.length === 0 && recentComments.length === 0 ? (
+          <div className="bg-gray-50 rounded-lg border border-gray-100 p-4 mb-3 text-center">
+            <Users size={24} className="text-gray-300 mx-auto mb-1.5" />
+            <p className="text-gray-400 text-xs">暂无共同好友和互动记录</p>
+            <p className="text-gray-300 text-[10px] mt-0.5">成为好友后可以看到更多信息</p>
+          </div>
+        ) : null}
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="flex border-b border-gray-200">
@@ -347,8 +353,25 @@ export default function Profile() {
                   <PostCard key={post.id} post={post} />
                 ))}
                 {visiblePosts.length === 0 && (
-                  <div className="text-center text-gray-400 text-sm py-8">
-                    {isMe ? '暂无动态，去发布一条吧！' : '无法查看该用户的动态（非好友仅可见公开内容）'}
+                  <div className="text-center py-10">
+                    {isMe ? (
+                      <>
+                        <FileText size={36} className="text-gray-200 mx-auto mb-2" />
+                        <p className="text-gray-500 text-sm font-medium">你还没有发布动态</p>
+                        <p className="text-gray-400 text-xs mt-1">去首页发布第一条动态吧</p>
+                        <button onClick={() => navigate('/')} className="mt-3 text-xs bg-[#3B5998] text-white px-4 py-1.5 rounded-full hover:bg-[#2A4A7F]">去发布动态</button>
+                      </>
+                    ) : (
+                      <>
+                        <FileText size={36} className="text-gray-200 mx-auto mb-2" />
+                        <p className="text-gray-500 text-sm font-medium">无法查看该用户的动态</p>
+                        <p className="text-gray-400 text-xs mt-1">该用户没有公开动态，成为好友后可能可以看到更多内容</p>
+                        <div className="mt-3 flex justify-center gap-3">
+                          <button onClick={() => navigate('/search')} className="text-xs text-[#3B5998] hover:underline">返回搜索</button>
+                          <button onClick={() => navigate(-1)} className="text-xs text-gray-400 hover:text-gray-600">返回上一页</button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -360,8 +383,25 @@ export default function Profile() {
                   <ProfilePhotoCard key={photo.id} photo={photo} isOwner={isMe} />
                 ))}
                 {visiblePhotos.length === 0 && (
-                  <div className="col-span-3 text-center text-gray-400 text-sm py-8">
-                    {isMe ? '暂无照片，发布动态时可以附带照片' : '无法查看该用户的照片（非好友仅可见公开内容）'}
+                  <div className="col-span-3 text-center py-10">
+                    {isMe ? (
+                      <>
+                        <Image size={36} className="text-gray-200 mx-auto mb-2" />
+                        <p className="text-gray-500 text-sm font-medium">你还没有照片</p>
+                        <p className="text-gray-400 text-xs mt-1">发布动态时可以附带照片，去发布你的第一张照片吧</p>
+                        <button onClick={() => navigate('/')} className="mt-3 text-xs bg-[#3B5998] text-white px-4 py-1.5 rounded-full hover:bg-[#2A4A7F]">去发布照片</button>
+                      </>
+                    ) : (
+                      <>
+                        <Image size={36} className="text-gray-200 mx-auto mb-2" />
+                        <p className="text-gray-500 text-sm font-medium">无法查看该用户的照片</p>
+                        <p className="text-gray-400 text-xs mt-1">该用户没有公开照片，成为好友后可能可以看到更多内容</p>
+                        <div className="mt-3 flex justify-center gap-3">
+                          <button onClick={() => navigate('/search')} className="text-xs text-[#3B5998] hover:underline">返回搜索</button>
+                          <button onClick={() => navigate(-1)} className="text-xs text-gray-400 hover:text-gray-600">返回上一页</button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -383,8 +423,20 @@ export default function Profile() {
                   </button>
                 ))}
                 {profileFriends.length === 0 && (
-                  <div className="col-span-2 text-center text-gray-400 text-sm py-8">
-                    {isMe ? '暂无好友，去搜索添加吧！' : '该用户暂无好友'}
+                  <div className="col-span-2 text-center py-10">
+                    {isMe ? (
+                      <>
+                        <Users size={36} className="text-gray-200 mx-auto mb-2" />
+                        <p className="text-gray-500 text-sm font-medium">你还没有好友</p>
+                        <p className="text-gray-400 text-xs mt-1">去搜索发现同学，发起好友申请吧</p>
+                        <button onClick={() => navigate('/search')} className="mt-3 text-xs bg-[#3B5998] text-white px-4 py-1.5 rounded-full hover:bg-[#2A4A7F]">去搜索添加好友</button>
+                      </>
+                    ) : (
+                      <>
+                        <Users size={36} className="text-gray-200 mx-auto mb-2" />
+                        <p className="text-gray-500 text-sm font-medium">该用户暂无好友</p>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

@@ -50,7 +50,7 @@ export default function CommentSection({ postId }: Props) {
 
   return (
     <div className="mt-2">
-      {comments.length > 0 && (
+      {comments.length > 0 ? (
         <button
           onClick={() => setExpanded(!expanded)}
           className="flex items-center gap-1 text-xs text-[#3B5998] hover:underline mb-1"
@@ -58,7 +58,11 @@ export default function CommentSection({ postId }: Props) {
           <MessageCircle size={12} />
           {comments.length} 条评论 {expanded ? '收起' : '展开'}
         </button>
-      )}
+      ) : hasPermission ? (
+        <div className="flex items-center gap-1 text-[10px] text-gray-300 mb-1">
+          <MessageCircle size={10} /> 暂无评论，来说两句吧
+        </div>
+      ) : null}
 
       {expanded && (
         <div className="space-y-2 mb-2">
@@ -136,8 +140,11 @@ export default function CommentSection({ postId }: Props) {
           </div>
         </div>
       ) : (
-        <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mt-1">
-          <Lock size={10} /> 仅好友可评论此动态
+        <div className="bg-gray-50 rounded-lg px-3 py-2 mt-1">
+          <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
+            <Lock size={10} /> 你无法评论此动态
+          </div>
+          <p className="text-[10px] text-gray-300 mt-0.5">仅作者的好友可以评论，成为好友后即可参与互动</p>
         </div>
       )}
     </div>

@@ -194,14 +194,31 @@ export default function Classmates() {
 
   const hasAnyFilter = searchKw.trim() || activeTab !== 'all' || sortKey !== 'name' || sortDir !== 'asc';
 
-  // Tab 数量
-  const tabCounts = useMemo(() => ({
-    all: stats.total,
-    friends: stats.friends,
-    pending: stats.pendingSent + stats.pendingReceived,
-    suggested: stats.none,
-    online: stats.online,
-  }), [stats]);
+  // Tab 数量（搜索时按搜索结果计数，否则用全局统计）
+  const tabCounts = useMemo(() => {
+    if (searchKw.trim()) {
+      const baseList = users.filter(u => u.id !== currentUserId);
+      const kw = searchKw.toLowerCase().trim();
+      const matched = baseList.filter(u =>
+        u.name.toLowerCase().includes(kw) || u.school.toLowerCase().includes(kw) ||
+        u.className.toLowerCase().includes(kw) || u.grade.toLowerCase().includes(kw)
+      );
+      return {
+        all: matched.length,
+        friends: matched.filter(u => getRelation(u.id) === 'friend').length,
+        pending: matched.filter(u => { const r = getRelation(u.id); return r === 'pending_sent' || r === 'pending_received'; }).length,
+        suggested: matched.filter(u => { const r = getRelation(u.id); return r === 'none' || r === 'rejected' || r === 'rejected_them'; }).length,
+        online: matched.filter(u => u.online).length,
+      };
+    }
+    return {
+      all: stats.total,
+      friends: stats.friends,
+      pending: stats.pendingSent + stats.pendingReceived,
+      suggested: stats.none,
+      online: stats.online,
+    };
+  }, [searchKw, users, currentUserId, getRelation, stats, friendships]);
 
   return (
     <div className="min-h-screen bg-[#F0F2F5]">
@@ -218,7 +235,7 @@ export default function Classmates() {
         <div className="grid grid-cols-5 gap-2 mb-4">
           {[
             { label: '好友', value: stats.friends, color: 'bg-green-50 text-green-700 border-green-200' },
-            { label: '待处理', value: stats.pendingReceived, color: 'bg-blue-50 text-blue-700 border-blue-200' },
+            { label: '待确认', value: stats.pendingReceived, color: 'bg-blue-50 text-blue-700 border-blue-200' },
             { label: '已发出', value: stats.pendingSent, color: 'bg-amber-50 text-amber-700 border-amber-200' },
             { label: '可添加', value: stats.none, color: 'bg-gray-50 text-gray-600 border-gray-200' },
             { label: '在线', value: stats.online, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
@@ -446,21 +463,70 @@ export default function Classmates() {
               )
             ) : (
               <div className="py-10 text-center">
-                <Users size={40} className="text-gray-200 mx-auto mb-3" />
                 {searchKw.trim() ? (
                   <>
-                    <p className="text-gray-400 text-sm mb-1">未找到匹配「{searchKw}」的同学</p>
-                    <button onClick={() => setSearchKw('')} className="text-xs text-[#3B5998] hover:underline">清除搜索</button>
+                    <Users size={40} className="text-gray-200 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm font-medium mb-1">未找到匹配「{searchKw}」的同学</p>
+                    <p className="text-gray-400 text-xs">试试换一个关键词搜索</p>
+                    <div className="mt-3 flex justify-center gap-3">
+                      <button onClick={() => setSearchKw('')} className="text-xs text-[#3B5998] hover:underline">清除搜索</button>
+                      <button onClick={clearFilters} className="text-xs text-gray-400 hover:text-red-500">清除所有筛选</button>
+                    </div>
                   </>
-                ) : activeTab !== 'all' ? (
+                ) : activeTab === 'friends' ? (
                   <>
-                    <p className="text-gray-400 text-sm mb-1">
-                      {activeTab === 'friends' ? '暂无好友' : activeTab === 'pending' ? '暂无待处理申请' : activeTab === 'suggested' ? '暂无可添加的同学' : '暂无在线同学'}
-                    </p>
-                    <button onClick={() => setActiveTab('all')} className="text-xs text-[#3B5998] hover:underline">查看全部同学</button>
+                    <Users size={40} className="text-gray-200 mx-auto mb-3" />
+                    {stats.friends === 0 ? (
+                      <>
+                        <p className="text-gray-500 text-sm font-medium mb-1">你还没有好友</p>
+                        <p className="text-gray-400 text-xs">去搜索发现同学，发起好友申请吧</p>
+                        <div className="mt-3 flex justify-center gap-3">
+                          <button onClick={() => navigate('/search')} className="text-xs bg-[#3B5998] text-white px-4 py-1.5 rounded-full hover:bg-[#2A4A7F]">去搜索同学</button>
+                          <button onClick={() => setActiveTab('all')} className="text-xs text-[#3B5998] hover:underline">查看全部同学</button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-gray-500 text-sm font-medium mb-1">当前筛选条件下没有匹配的好友</p>
+                        <button onClick={clearFilters} className="text-xs text-gray-400 hover:text-red-500">清除筛选</button>
+                      </>
+                    )}
+                  </>
+                ) : activeTab === 'pending' ? (
+                  <>
+                    <Clock size={40} className="text-gray-200 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm font-medium mb-1">暂无待处理的好友申请</p>
+                    <p className="text-gray-400 text-xs">所有申请都已处理完毕</p>
+                    <button onClick={() => setActiveTab('all')} className="mt-3 text-xs text-[#3B5998] hover:underline">查看全部同学</button>
+                  </>
+                ) : activeTab === 'suggested' ? (
+                  <>
+                    <UserPlus size={40} className="text-gray-200 mx-auto mb-3" />
+                    {stats.none === 0 ? (
+                      <>
+                        <p className="text-gray-500 text-sm font-medium mb-1">所有同学都已有好友关系或已发送申请</p>
+                        <p className="text-gray-400 text-xs">太棒了，你已经和大部分同学建立了联系</p>
+                        <button onClick={() => setActiveTab('friends')} className="mt-3 text-xs text-[#3B5998] hover:underline">查看我的好友</button>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-gray-500 text-sm font-medium mb-1">当前筛选条件下没有可添加的同学</p>
+                        <button onClick={clearFilters} className="text-xs text-gray-400 hover:text-red-500">清除筛选</button>
+                      </>
+                    )}
+                  </>
+                ) : activeTab === 'online' ? (
+                  <>
+                    <Users size={40} className="text-gray-200 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm font-medium mb-1">暂无在线同学</p>
+                    <p className="text-gray-400 text-xs">同学们可能都离线了，稍后再来看看</p>
+                    <button onClick={() => setActiveTab('all')} className="mt-3 text-xs text-[#3B5998] hover:underline">查看全部同学</button>
                   </>
                 ) : (
-                  <p className="text-gray-400 text-sm">暂无同学数据</p>
+                  <>
+                    <Users size={40} className="text-gray-200 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm font-medium">暂无同学数据</p>
+                  </>
                 )}
               </div>
             )}

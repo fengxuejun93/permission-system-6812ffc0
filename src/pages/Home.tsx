@@ -6,7 +6,7 @@ import PostForm from '@/components/PostForm';
 import PostCard from '@/components/PostCard';
 import Avatar from '@/components/Avatar';
 import { useNavigate } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { Search, FileText } from 'lucide-react';
 
 export default function Home() {
   const { getVisiblePosts, currentUserId, users, getFriendsOf, getRelation } = useSocialStore();
@@ -75,8 +75,14 @@ export default function Home() {
             <PostCard key={post.id} post={post} />
           ))}
           {posts.length === 0 && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center text-gray-400 text-sm">
-              暂无可见动态
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-10 text-center">
+              <FileText size={40} className="text-gray-200 mx-auto mb-3" />
+              <p className="text-gray-500 text-sm font-medium">暂无可见动态</p>
+              <p className="text-gray-400 text-xs mt-1">当前账号下没有任何可见的动态</p>
+              <div className="mt-4 flex justify-center gap-3">
+                <button onClick={() => navigate('/search')} className="text-xs bg-[#3B5998] text-white px-4 py-1.5 rounded-full hover:bg-[#2A4A7F]">搜索添加好友</button>
+                <button onClick={() => navigate('/classmates')} className="text-xs text-[#3B5998] hover:underline">查看同学录</button>
+              </div>
             </div>
           )}
         </main>

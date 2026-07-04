@@ -142,7 +142,17 @@ export default function Sidebar() {
             </button>
           ))}
           {friends.length === 0 && (
-            <div className="px-4 py-6 text-center text-sm text-gray-400">暂无好友</div>
+            <div className="px-4 py-6 text-center">
+              <Users size={24} className="text-gray-200 mx-auto mb-2" />
+              <p className="text-xs text-gray-400 font-medium">暂无好友</p>
+              <p className="text-[10px] text-gray-300 mt-0.5">去搜索添加同学吧</p>
+              <button
+                onClick={() => navigate('/search')}
+                className="mt-2 text-[10px] text-[#3B5998] hover:underline"
+              >
+                搜索添加好友
+              </button>
+            </div>
           )}
         </div>
         <div className="px-4 py-2 border-t border-gray-100 space-y-1.5">

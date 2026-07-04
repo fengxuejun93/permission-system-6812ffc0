@@ -383,20 +383,21 @@ export default function SearchPage() {
     setPostKeyword('');
   };
 
-  // 统计
-  const allCount = hasSearched ? results.length : defaultUserList.length;
+  // 统计（考虑在线筛选，确保数字与列表一致）
+  const onlineBase = (list: User[]) => filterOnline ? list.filter(u => u.online) : list;
+  const allCount = hasSearched ? onlineBase(results).length : defaultUserList.length;
   const friendsCount = hasSearched
-    ? results.filter(u => getRelation(u.id) === 'friend').length
-    : friends.length;
+    ? onlineBase(results.filter(u => getRelation(u.id) === 'friend')).length
+    : onlineBase(friends).length;
   const pendingCount = hasSearched
-    ? results.filter(u => { const r = getRelation(u.id); return r === 'pending_sent' || r === 'pending_received'; }).length
-    : pendingReceived.length + pendingSent.length;
+    ? onlineBase(results.filter(u => { const r = getRelation(u.id); return r === 'pending_sent' || r === 'pending_received'; })).length
+    : onlineBase(users.filter(u => u.id !== currentUserId && (getRelation(u.id) === 'pending_sent' || getRelation(u.id) === 'pending_received'))).length;
   const suggestedCount = hasSearched
-    ? results.filter(u => { const r = getRelation(u.id); return r === 'none' || r === 'rejected' || r === 'rejected_them'; }).length
-    : users.filter(u => u.id !== currentUserId && (getRelation(u.id) === 'none' || getRelation(u.id) === 'rejected' || getRelation(u.id) === 'rejected_them')).length;
+    ? onlineBase(results.filter(u => { const r = getRelation(u.id); return r === 'none' || r === 'rejected' || r === 'rejected_them'; })).length
+    : onlineBase(users.filter(u => u.id !== currentUserId && (getRelation(u.id) === 'none' || getRelation(u.id) === 'rejected' || getRelation(u.id) === 'rejected_them'))).length;
   const photoActiveCount = hasSearched
-    ? results.filter(u => photos.some(p => p.ownerId === u.id)).length
-    : users.filter(u => u.id !== currentUserId && photos.some(p => p.ownerId === u.id)).length;
+    ? onlineBase(results.filter(u => photos.some(p => p.ownerId === u.id))).length
+    : onlineBase(users.filter(u => u.id !== currentUserId && photos.some(p => p.ownerId === u.id))).length;
 
   const displayList = hasSearched ? filteredResults : defaultUserList;
   const hasAnyFilter = searchField !== 'all' || filterOnline || activeTab !== 'all' || (hasSearched && keyword.trim());
@@ -493,32 +494,82 @@ export default function SearchPage() {
                 ))}
               </div>
             ) : (
-              <div className="py-8 text-center">
+              <div className="py-10 text-center">
                 {hasSearched && keyword.trim().length < 2 ? (
                   <>
-                    <AlertCircle size={32} className="text-amber-300 mx-auto mb-2" />
-                    <p className="text-gray-500 text-sm">搜索关键词至少需要2个字符</p>
-                    <button onClick={() => { setKeyword(''); setHasSearched(false); }} className="mt-2 text-xs text-[#3B5998] hover:underline">返回全部同学</button>
+                    <AlertCircle size={36} className="text-amber-300 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm font-medium">关键词太短</p>
+                    <p className="text-gray-400 text-xs mt-1">搜索关键词至少需要2个字符</p>
+                    <button onClick={() => { setKeyword(''); setHasSearched(false); }} className="mt-3 text-xs text-[#3B5998] hover:underline">返回全部同学</button>
                   </>
                 ) : hasSearched ? (
                   <>
-                    <AlertCircle size={32} className="text-gray-300 mx-auto mb-2" />
-                    <p className="text-gray-400 text-sm">未找到匹配「{keyword}」的同学</p>
-                    {activeTab !== 'all' && <p className="text-gray-300 text-xs mt-1">当前筛选「{FILTER_TABS.find(t => t.key === activeTab)?.label}」可能过窄，试试切换到"全部同学"</p>}
-                    <div className="mt-3 flex justify-center gap-2">
+                    <AlertCircle size={36} className="text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm font-medium">未找到匹配「{keyword}」的同学</p>
+                    {activeTab !== 'all' && (
+                      <p className="text-gray-400 text-xs mt-1">当前筛选「{FILTER_TABS.find(t => t.key === activeTab)?.label}」下无结果，试试切换到"全部同学"</p>
+                    )}
+                    <div className="mt-3 flex justify-center gap-3">
                       <button onClick={() => setActiveTab('all')} className="text-xs text-[#3B5998] hover:underline">查看全部同学</button>
                       <button onClick={clearAllFilters} className="text-xs text-gray-400 hover:text-red-500">清除所有筛选</button>
                     </div>
                   </>
+                ) : activeTab === 'friends' ? (
+                  <>
+                    <Users size={36} className="text-gray-200 mx-auto mb-3" />
+                    {friends.length === 0 ? (
+                      <>
+                        <p className="text-gray-500 text-sm font-medium">你还没有好友</p>
+                        <p className="text-gray-400 text-xs mt-1">去搜索发现同学，发起好友申请吧</p>
+                        <div className="mt-3 flex justify-center gap-3">
+                          <button onClick={() => navigate('/search')} className="text-xs bg-[#3B5998] text-white px-4 py-1.5 rounded-full hover:bg-[#2A4A7F]">去搜索同学</button>
+                          <button onClick={() => setActiveTab('all')} className="text-xs text-[#3B5998] hover:underline">查看全部同学</button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-gray-500 text-sm font-medium">当前条件下没有匹配的好友</p>
+                        <p className="text-gray-400 text-xs mt-1">试试清除筛选条件</p>
+                        <div className="mt-3 flex justify-center gap-3">
+                          <button onClick={clearAllFilters} className="text-xs text-gray-400 hover:text-red-500">清除筛选</button>
+                          <button onClick={() => setActiveTab('all')} className="text-xs text-[#3B5998] hover:underline">查看全部同学</button>
+                        </div>
+                      </>
+                    )}
+                  </>
+                ) : activeTab === 'pending' ? (
+                  <>
+                    <Clock size={36} className="text-gray-200 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm font-medium">暂无待处理的好友申请</p>
+                    <p className="text-gray-400 text-xs mt-1">所有申请都已处理完毕</p>
+                    <button onClick={() => setActiveTab('all')} className="mt-3 text-xs text-[#3B5998] hover:underline">查看全部同学</button>
+                  </>
+                ) : activeTab === 'suggested' ? (
+                  <>
+                    <UserPlus size={36} className="text-gray-200 mx-auto mb-3" />
+                    {suggestedCount === 0 ? (
+                      <>
+                        <p className="text-gray-500 text-sm font-medium">所有同学都已有好友关系或已发送申请</p>
+                        <p className="text-gray-400 text-xs mt-1">太棒了，你已经和大部分同学建立了联系</p>
+                        <button onClick={() => setActiveTab('friends')} className="mt-3 text-xs text-[#3B5998] hover:underline">查看我的好友</button>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-gray-500 text-sm font-medium">当前条件下没有可推荐的同学</p>
+                        <button onClick={clearAllFilters} className="mt-3 text-xs text-gray-400 hover:text-red-500">清除筛选</button>
+                      </>
+                    )}
+                  </>
+                ) : activeTab === 'photoActive' ? (
+                  <>
+                    <Image size={36} className="text-gray-200 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm font-medium">暂无最近发照片的同学</p>
+                    <button onClick={() => setActiveTab('all')} className="mt-3 text-xs text-[#3B5998] hover:underline">查看全部同学</button>
+                  </>
                 ) : (
                   <>
-                    <AlertCircle size={32} className="text-gray-300 mx-auto mb-2" />
-                    <p className="text-gray-400 text-sm">
-                      {activeTab === 'friends' ? '暂无好友，去搜索添加吧' : activeTab === 'pending' ? '暂无待处理申请' : activeTab === 'suggested' ? '暂无推荐同学' : activeTab === 'photoActive' ? '暂无最近发照片的同学' : '暂无同学'}
-                    </p>
-                    {activeTab !== 'all' && (
-                      <button onClick={() => setActiveTab('all')} className="mt-2 text-xs text-[#3B5998] hover:underline">查看全部同学</button>
-                    )}
+                    <Users size={36} className="text-gray-200 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm font-medium">暂无同学数据</p>
                   </>
                 )}
               </div>
@@ -621,20 +672,50 @@ export default function SearchPage() {
                 })}
               </div>
             ) : (
-              <div className="py-6 text-center">
-                <AlertCircle size={24} className="text-gray-300 mx-auto mb-1.5" />
-                <p className="text-gray-400 text-xs">
-                  {postVisFilter === 'self'
-                    ? '仅自己可见的动态只有作者本人能看到，切换到对应账号试试'
-                    : postVisFilter !== 'all_visible'
-                      ? `当前筛选「${POST_VIS_FILTERS.find(f => f.key === postVisFilter)?.label}」无匹配动态`
-                      : postKeyword
-                        ? `包含「${postKeyword}」的动态不存在`
-                        : '暂无可见动态'
-                  }
-                </p>
-                {(postVisFilter !== 'all_visible' || postKeyword) && (
-                  <button onClick={() => { setPostVisFilter('all_visible'); setPostKeyword(''); }} className="mt-1.5 text-[10px] text-[#3B5998] hover:underline">返回我能看到的</button>
+              <div className="py-8 text-center">
+                {postVisFilter === 'self' ? (
+                  <>
+                    <Lock size={32} className="text-gray-200 mx-auto mb-2" />
+                    <p className="text-gray-500 text-sm font-medium">仅自己可见的动态</p>
+                    <p className="text-gray-400 text-xs mt-1">这些动态只有作者本人能看到，切换到对应账号试试</p>
+                    <button onClick={() => setPostVisFilter('all_visible')} className="mt-2 text-xs text-[#3B5998] hover:underline">返回我能看到的</button>
+                  </>
+                ) : postVisFilter === 'friends' ? (
+                  <>
+                    <Users size={32} className="text-gray-200 mx-auto mb-2" />
+                    <p className="text-gray-500 text-sm font-medium">没有好友可见的动态</p>
+                    <p className="text-gray-400 text-xs mt-1">好友可见的动态需要双方是好友才能查看，试试切换筛选或添加更多好友</p>
+                    <div className="mt-2 flex justify-center gap-3">
+                      <button onClick={() => setPostVisFilter('all_visible')} className="text-xs text-[#3B5998] hover:underline">返回我能看到的</button>
+                      <button onClick={() => navigate('/search')} className="text-xs text-gray-400 hover:text-[#3B5998]">去添加好友</button>
+                    </div>
+                  </>
+                ) : postVisFilter === 'public' ? (
+                  <>
+                    <Globe size={32} className="text-gray-200 mx-auto mb-2" />
+                    <p className="text-gray-500 text-sm font-medium">没有公开的动态</p>
+                    <p className="text-gray-400 text-xs mt-1">当前没有任何公开可见的动态</p>
+                    <button onClick={() => setPostVisFilter('all_visible')} className="mt-2 text-xs text-[#3B5998] hover:underline">返回我能看到的</button>
+                  </>
+                ) : postKeyword ? (
+                  <>
+                    <AlertCircle size={32} className="text-gray-300 mx-auto mb-2" />
+                    <p className="text-gray-500 text-sm font-medium">没有包含「{postKeyword}」的动态</p>
+                    <div className="mt-2 flex justify-center gap-3">
+                      <button onClick={() => setPostKeyword('')} className="text-xs text-gray-400 hover:text-red-500">清除关键词</button>
+                      <button onClick={() => { setPostVisFilter('all_visible'); setPostKeyword(''); }} className="text-xs text-[#3B5998] hover:underline">返回我能看到的</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <FileText size={32} className="text-gray-200 mx-auto mb-2" />
+                    <p className="text-gray-500 text-sm font-medium">暂无可见动态</p>
+                    <p className="text-gray-400 text-xs mt-1">当前账号下没有任何可见的动态，去发布一条或添加好友看看</p>
+                    <div className="mt-2 flex justify-center gap-3">
+                      <button onClick={() => navigate('/')} className="text-xs text-[#3B5998] hover:underline">去发布动态</button>
+                      <button onClick={() => navigate('/search')} className="text-xs text-gray-400 hover:text-[#3B5998]">去添加好友</button>
+                    </div>
+                  </>
                 )}
               </div>
             )}
