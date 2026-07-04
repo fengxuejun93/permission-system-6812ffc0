@@ -7,7 +7,7 @@ import Avatar from '@/components/Avatar';
 import PostCard from '@/components/PostCard';
 import PhotoCard from '@/components/PhotoCard';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { UserPlus, Check, Users, FileText, Image, ArrowLeft, Clock, XCircle, RotateCcw, UserMinus, Trash2 } from 'lucide-react';
+import { UserPlus, Check, Users, FileText, Image, ArrowLeft, Clock, XCircle, RotateCcw, UserMinus, Trash2, MessageSquare } from 'lucide-react';
 import type { RelationType, Photo } from '@/types';
 
 // 好友关系按钮组件
@@ -21,22 +21,18 @@ function FriendButton({ userId, userName }: { userId: string; userName: string }
     sendFriendRequest(userId);
     showToast(`已向 ${userName} 发送好友申请`);
   };
-
   const handleCancel = () => {
     cancelFriendRequest(userId);
     showToast('已取消好友申请');
   };
-
   const handleAccept = () => {
     acceptFriendRequest(userId);
     showToast(`已通过 ${userName} 的好友申请`);
   };
-
   const handleReject = () => {
     rejectFriendRequest(userId);
     showToast(`已拒绝 ${userName} 的好友申请`);
   };
-
   const handleUnfriend = () => {
     unfriend(userId);
     showToast(`已解除与 ${userName} 的好友关系`);
@@ -73,27 +69,16 @@ function FriendButton({ userId, userName }: { userId: string; userName: string }
           <div className="flex items-center gap-1.5 text-sm text-white/80 bg-white/10 rounded-full px-4 py-2">
             <Clock size={16} /> 待对方确认
           </div>
-          <button
-            onClick={handleCancel}
-            className="text-[10px] text-white/50 hover:text-white/80 transition-colors"
-          >
-            取消申请
-          </button>
+          <button onClick={handleCancel} className="text-[10px] text-white/50 hover:text-white/80 transition-colors">取消申请</button>
         </div>
       );
     case 'pending_received':
       return (
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleAccept}
-            className="flex items-center gap-1.5 text-sm bg-white text-[#3B5998] rounded-full px-4 py-2 font-medium hover:bg-gray-100 transition-colors"
-          >
+          <button onClick={handleAccept} className="flex items-center gap-1.5 text-sm bg-white text-[#3B5998] rounded-full px-4 py-2 font-medium hover:bg-gray-100 transition-colors">
             <Check size={16} /> 通过
           </button>
-          <button
-            onClick={handleReject}
-            className="flex items-center gap-1.5 text-sm bg-white/10 text-white/80 rounded-full px-4 py-2 hover:bg-white/20 transition-colors"
-          >
+          <button onClick={handleReject} className="flex items-center gap-1.5 text-sm bg-white/10 text-white/80 rounded-full px-4 py-2 hover:bg-white/20 transition-colors">
             <XCircle size={16} /> 拒绝
           </button>
         </div>
@@ -104,10 +89,7 @@ function FriendButton({ userId, userName }: { userId: string; userName: string }
           <div className="flex items-center gap-1.5 text-sm text-red-300 bg-red-500/10 rounded-full px-4 py-2">
             <XCircle size={16} /> 申请被拒
           </div>
-          <button
-            onClick={handleSend}
-            className="flex items-center gap-1 text-[10px] text-white/50 hover:text-white/80 transition-colors"
-          >
+          <button onClick={handleSend} className="flex items-center gap-1 text-[10px] text-white/50 hover:text-white/80 transition-colors">
             <RotateCcw size={10} /> 重新申请
           </button>
         </div>
@@ -115,10 +97,7 @@ function FriendButton({ userId, userName }: { userId: string; userName: string }
     case 'none':
     default:
       return (
-        <button
-          onClick={handleSend}
-          className="flex items-center gap-1.5 text-sm bg-white text-[#3B5998] rounded-full px-4 py-2 font-medium hover:bg-gray-100 transition-colors"
-        >
+        <button onClick={handleSend} className="flex items-center gap-1.5 text-sm bg-white text-[#3B5998] rounded-full px-4 py-2 font-medium hover:bg-gray-100 transition-colors">
           <UserPlus size={16} /> 加为好友
         </button>
       );
@@ -167,7 +146,7 @@ function ProfilePhotoCard({ photo, isOwner }: { photo: Photo; isOwner: boolean }
 export default function Profile() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
-  const { users, currentUserId, getVisiblePosts, getVisiblePhotos, getFriendsOf, posts, photos } = useSocialStore();
+  const { users, currentUserId, getVisiblePosts, getVisiblePhotos, getFriendsOf, posts, photos, comments, getMutualFriends, getCommentsForPost } = useSocialStore();
   const [activeTab, setActiveTab] = useState<'posts' | 'photos' | 'friends'>('posts');
 
   if (!userId) {
@@ -204,21 +183,35 @@ export default function Profile() {
   const hiddenPostCount = allUserPosts.length - visiblePosts.length;
   const hiddenPhotoCount = allUserPhotos.length - visiblePhotos.length;
 
+  // 共同好友
+  const mutualFriends = !isMe ? getMutualFriends(userId) : [];
+
+  // 最近评论：从该用户的可见动态中找评论
+  const recentComments = visiblePosts
+    .flatMap(p => getCommentsForPost(p.id))
+    .filter(c => c.authorId !== userId) // 排除自己的评论，看别人给ta的评论
+    .slice(0, 5);
+
   return (
     <div className="min-h-screen bg-[#F0F2F5]">
       <Header />
 
       <div className="bg-gradient-to-r from-[#3B5998] to-[#5B7DC9] pt-14">
         <div className="max-w-4xl mx-auto px-4 py-8 flex items-end gap-5">
-          <div
-            className="w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-bold border-4 border-white shadow-lg shrink-0"
-            style={{ backgroundColor: profileUser.avatarColor }}
-          >
-            {profileUser.name[0]}
+          <div className="relative">
+            <div
+              className="w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-bold border-4 border-white shadow-lg shrink-0"
+              style={{ backgroundColor: profileUser.avatarColor }}
+            >
+              {profileUser.name[0]}
+            </div>
+            {profileUser.online && (
+              <div className="absolute bottom-1 right-1 w-5 h-5 bg-green-400 border-3 border-white rounded-full" title="在线" />
+            )}
           </div>
           <div className="flex-1 text-white mb-1">
             <h1 className="text-2xl font-bold">{profileUser.name}</h1>
-            <p className="text-white/70 text-sm mt-1">{profileUser.school} · {profileUser.className}</p>
+            <p className="text-white/70 text-sm mt-1">{profileUser.school} · {profileUser.className} · {profileUser.grade}</p>
             <p className="text-white/50 text-xs mt-0.5 italic">"{profileUser.signature}"</p>
           </div>
           {!isMe && (
@@ -230,10 +223,13 @@ export default function Profile() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 -mt-1">
-        <div className="bg-white rounded-b-lg shadow-sm border border-gray-200 border-t-0 px-6 py-3 flex items-center gap-6 text-sm">
+        <div className="bg-white rounded-b-lg shadow-sm border border-gray-200 border-t-0 px-6 py-3 flex items-center gap-6 text-sm flex-wrap">
           <span className="flex items-center gap-1.5 text-gray-500"><Users size={16} className="text-[#3B5998]" /> <b className="text-gray-800">{profileFriends.length}</b> 好友</span>
           <span className="flex items-center gap-1.5 text-gray-500"><FileText size={16} className="text-[#3B5998]" /> <b className="text-gray-800">{isMe ? allUserPosts.length : visiblePosts.length}</b> 动态</span>
           <span className="flex items-center gap-1.5 text-gray-500"><Image size={16} className="text-[#3B5998]" /> <b className="text-gray-800">{isMe ? allUserPhotos.length : visiblePhotos.length}</b> 照片</span>
+          {!isMe && mutualFriends.length > 0 && (
+            <span className="flex items-center gap-1.5 text-gray-500"><Users size={16} className="text-purple-500" /> <b className="text-gray-800">{mutualFriends.length}</b> 共同好友</span>
+          )}
           {!isMe && (hiddenPostCount > 0 || hiddenPhotoCount > 0) && (
             <span className="text-xs text-gray-400 ml-auto">
               因权限不可见：{hiddenPostCount > 0 && `${hiddenPostCount} 条动态`}{hiddenPostCount > 0 && hiddenPhotoCount > 0 && '、'}{hiddenPhotoCount > 0 && `${hiddenPhotoCount} 张照片`}
@@ -248,6 +244,56 @@ export default function Profile() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 mt-3 pb-6">
+        {/* 共同好友和最近评论区域 */}
+        {!isMe && (mutualFriends.length > 0 || recentComments.length > 0) && (
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            {mutualFriends.length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <h3 className="font-semibold text-sm text-gray-800 mb-3 flex items-center gap-1.5">
+                  <Users size={14} className="text-purple-500" /> 共同好友
+                  <span className="text-xs text-gray-400 font-normal">({mutualFriends.length})</span>
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {mutualFriends.slice(0, 6).map(mf => (
+                    <button
+                      key={mf.id}
+                      onClick={() => navigate(`/profile/${mf.id}`)}
+                      className="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <Avatar userId={mf.id} size={24} />
+                      <span className="text-xs text-gray-700">{mf.name}</span>
+                    </button>
+                  ))}
+                  {mutualFriends.length > 6 && <span className="text-xs text-gray-400 self-center">等{mutualFriends.length}人</span>}
+                </div>
+              </div>
+            )}
+            {recentComments.length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <h3 className="font-semibold text-sm text-gray-800 mb-3 flex items-center gap-1.5">
+                  <MessageSquare size={14} className="text-[#3B5998]" /> 最近评论
+                </h3>
+                <div className="space-y-2">
+                  {recentComments.slice(0, 3).map(c => {
+                    const commenter = users.find(u => u.id === c.authorId);
+                    const post = posts.find(p => p.id === c.postId);
+                    return (
+                      <div key={c.id} className="flex items-start gap-2">
+                        <Avatar userId={c.authorId} size={20} />
+                        <div className="min-w-0">
+                          <span className="text-xs font-medium text-[#3B5998]">{commenter?.name}</span>
+                          <p className="text-[11px] text-gray-500 line-clamp-1">{c.content}</p>
+                          {post && <span className="text-[10px] text-gray-300">回复「{post.content.slice(0, 15)}...」</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="flex border-b border-gray-200">
             {(['posts', 'photos', 'friends'] as const).map(tab => (

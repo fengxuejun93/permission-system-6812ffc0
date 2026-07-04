@@ -27,6 +27,8 @@ export interface User {
   school: string;
   className: string;
   signature: string;
+  grade: string;
+  online: boolean;
 }
 
 export interface Post {

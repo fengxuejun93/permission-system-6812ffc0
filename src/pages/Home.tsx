@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useSocialStore } from '@/store/socialStore';
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
@@ -5,7 +6,7 @@ import PostForm from '@/components/PostForm';
 import PostCard from '@/components/PostCard';
 import Avatar from '@/components/Avatar';
 import { useNavigate } from 'react-router-dom';
-import { Clock, UserPlus } from 'lucide-react';
+import { Clock, UserPlus, Search } from 'lucide-react';
 
 export default function Home() {
   const { getVisiblePosts, currentUserId, users, getFriendsOf, getRelation } = useSocialStore();
@@ -13,6 +14,7 @@ export default function Home() {
   const currentUser = users.find(u => u.id === currentUserId);
   const friends = getFriendsOf(currentUserId);
   const navigate = useNavigate();
+  const [searchInput, setSearchInput] = useState('');
 
   // 按关系分类非自己用户
   const pendingSent: typeof users = [];
@@ -23,7 +25,7 @@ export default function Home() {
   users.forEach(u => {
     if (u.id === currentUserId) return;
     const rel = getRelation(u.id);
-    if (rel === 'friend') return; // 好友不在这展示
+    if (rel === 'friend') return;
     switch (rel) {
       case 'pending_sent': pendingSent.push(u); break;
       case 'pending_received': pendingReceived.push(u); break;
@@ -32,6 +34,14 @@ export default function Home() {
     }
   });
 
+  const handleSearch = () => {
+    if (searchInput.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchInput.trim())}`);
+    } else {
+      navigate('/search');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F0F2F5]">
       <Header />
@@ -39,6 +49,30 @@ export default function Home() {
         <Sidebar />
 
         <main className="flex-1 max-w-xl py-4 space-y-3">
+          {/* 搜索入口 */}
+          <div
+            className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 flex items-center gap-2 cursor-pointer hover:border-[#3B5998]/40 transition-colors"
+            onClick={() => navigate('/search')}
+          >
+            <Search size={18} className="text-gray-400 shrink-0" />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
+              placeholder="搜索同学、学校、院系..."
+              className="flex-1 text-sm bg-transparent outline-none placeholder-gray-400"
+              onClick={e => { e.stopPropagation(); navigate('/search'); }}
+              readOnly
+            />
+            <button
+              onClick={handleSearch}
+              className="text-xs bg-[#3B5998] text-white px-3 py-1.5 rounded-full hover:bg-[#2A4A7F] transition-colors shrink-0"
+            >
+              搜索
+            </button>
+          </div>
+
           <PostForm />
           {posts.map(post => (
             <PostCard key={post.id} post={post} />

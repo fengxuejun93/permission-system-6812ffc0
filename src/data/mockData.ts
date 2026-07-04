@@ -2,14 +2,14 @@ import type { User, Post, Photo, Comment, Friendship } from '@/types';
 import { generateSampleImageUri } from '@/utils/sampleImages';
 
 export const mockUsers: User[] = [
-  { id: 'u1', name: '李明', avatarColor: '#4A90D9', school: '北京大学', className: '计算机08本', signature: '永远相信美好的事情即将发生' },
-  { id: 'u2', name: '王芳', avatarColor: '#E74C3C', school: '北京大学', className: '计算机08本', signature: '今天也要元气满满！' },
-  { id: 'u3', name: '张伟', avatarColor: '#2ECC71', school: '清华大学', className: '经管08本', signature: 'Life is beautiful.' },
-  { id: 'u4', name: '刘洋', avatarColor: '#F39C12', school: '北京大学', className: '数学08本', signature: '数学是我的浪漫' },
-  { id: 'u5', name: '陈静', avatarColor: '#9B59B6', school: '复旦大学', className: '新闻08本', signature: '记录生活的每一刻' },
-  { id: 'u6', name: '赵磊', avatarColor: '#1ABC9C', school: '清华大学', className: '电子08本', signature: '电子世界，无限可能' },
-  { id: 'u7', name: '孙悦', avatarColor: '#E67E22', school: '浙江大学', className: '心理08本', signature: '了解自己，理解他人' },
-  { id: 'u8', name: '周婷', avatarColor: '#3498DB', school: '浙江大学', className: '英语08本', signature: 'Reading makes life better.' },
+  { id: 'u1', name: '李明', avatarColor: '#4A90D9', school: '北京大学', className: '计算机08本', signature: '永远相信美好的事情即将发生', grade: '2008级', online: true },
+  { id: 'u2', name: '王芳', avatarColor: '#E74C3C', school: '北京大学', className: '计算机08本', signature: '今天也要元气满满！', grade: '2008级', online: true },
+  { id: 'u3', name: '张伟', avatarColor: '#2ECC71', school: '清华大学', className: '经管08本', signature: 'Life is beautiful.', grade: '2008级', online: false },
+  { id: 'u4', name: '刘洋', avatarColor: '#F39C12', school: '北京大学', className: '数学08本', signature: '数学是我的浪漫', grade: '2008级', online: true },
+  { id: 'u5', name: '陈静', avatarColor: '#9B59B6', school: '复旦大学', className: '新闻08本', signature: '记录生活的每一刻', grade: '2008级', online: false },
+  { id: 'u6', name: '赵磊', avatarColor: '#1ABC9C', school: '清华大学', className: '电子08本', signature: '电子世界，无限可能', grade: '2008级', online: true },
+  { id: 'u7', name: '孙悦', avatarColor: '#E67E22', school: '浙江大学', className: '心理08本', signature: '了解自己，理解他人', grade: '2008级', online: false },
+  { id: 'u8', name: '周婷', avatarColor: '#3498DB', school: '浙江大学', className: '英语08本', signature: 'Reading makes life better.', grade: '2008级', online: true },
 ];
 
 // 好友关系：u1-u2, u1-u4, u1-u5, u2-u3, u3-u6, u5-u7

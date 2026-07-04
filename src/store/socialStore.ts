@@ -57,6 +57,7 @@ interface SocialState {
   deletePhoto: (photoId: string) => void;
   unfriend: (userId: string) => void;
   searchUsers: (keyword: string) => User[];
+  getMutualFriends: (userId: string) => User[];
 }
 
 const generateId = (prefix: string) => `${prefix}${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
@@ -428,7 +429,15 @@ export const useSocialStore = create<SocialState>((set, get) => ({
     if (!kw) return [];
     return state.users.filter(
       u => u.id !== state.currentUserId &&
-        (u.name.toLowerCase().includes(kw) || u.school.toLowerCase().includes(kw) || u.className.toLowerCase().includes(kw))
+        (u.name.toLowerCase().includes(kw) || u.school.toLowerCase().includes(kw) || u.className.toLowerCase().includes(kw) || u.grade.toLowerCase().includes(kw))
     );
+  },
+
+  getMutualFriends: (userId: string) => {
+    const state = get();
+    const myFriends = state.getFriendsOf(state.currentUserId);
+    const theirFriends = state.getFriendsOf(userId);
+    const theirIds = new Set(theirFriends.map(f => f.id));
+    return myFriends.filter(f => theirIds.has(f.id));
   },
 }));
