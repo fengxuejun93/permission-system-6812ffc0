@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import type { User, Post, Photo, Comment, Friendship, Visibility, RelationType, Article, ArticleCategory, ActivityLog, ActivityAction } from '@/types';
-import { mockUsers, mockPosts, mockPhotos, mockComments, mockFriendships } from '@/data/mockData';
+import type { User, Post, Photo, Comment, Friendship, Visibility, RelationType, Article, ArticleCategory, ActivityLog, ActivityAction, WallMessage, WallMessageStatus } from '@/types';
+import { mockUsers, mockPosts, mockPhotos, mockComments, mockFriendships, mockWallMessages } from '@/data/mockData';
 import { mockArticles } from '@/data/mockArticles';
 
 interface Stats {
@@ -11,6 +11,8 @@ interface Stats {
   pendingSentCount: number;
   commentCount: number;
   articleCount: number;
+  wallMessageCount: number;
+  unreadWallCount: number;
 }
 
 interface SocialState {
@@ -22,6 +24,7 @@ interface SocialState {
   friendships: Friendship[];
   articles: Article[];
   activityLogs: ActivityLog[];
+  wallMessages: WallMessage[];
 
   // 计算属性
   currentUser: () => User;
@@ -61,6 +64,19 @@ interface SocialState {
   getMutualFriends: (userId: string) => User[];
   getActivityLogs: () => ActivityLog[];
   clearActivityLogs: () => void;
+
+  // 留言板操作
+  getVisibleWallMessages: (wallOwnerId: string) => WallMessage[];
+  getWallMessagesByAuthor: (authorId: string) => WallMessage[];
+  getUnreadWallCount: () => number;
+  addWallMessage: (wallOwnerId: string, content: string, visibility: Visibility, replyToId?: string | null) => boolean;
+  editWallMessage: (messageId: string, content: string) => boolean;
+  deleteWallMessage: (messageId: string) => void;
+  hideWallMessage: (messageId: string) => void;
+  restoreWallMessage: (messageId: string) => void;
+  markWallMessageRead: (messageId: string) => void;
+  markAllWallRead: () => number;
+  canWriteWall: (wallOwnerId: string) => boolean;
 
   // 批量操作
   acceptAllFriendRequests: () => number;
@@ -104,6 +120,7 @@ export const useSocialStore = create<SocialState>((set, get) => ({
   friendships: mockFriendships,
   articles: mockArticles,
   activityLogs: [],
+  wallMessages: mockWallMessages,
 
   currentUser: () => {
     const state = get();
@@ -223,6 +240,8 @@ export const useSocialStore = create<SocialState>((set, get) => ({
       pendingSentCount: pendingSent.length,
       commentCount: myComments.length,
       articleCount: state.articles.filter(a => a.authorId === state.currentUserId).length,
+      wallMessageCount: state.wallMessages.filter(w => w.wallOwnerId === state.currentUserId && w.status === 'active').length,
+      unreadWallCount: state.wallMessages.filter(w => w.wallOwnerId === state.currentUserId && !w.isRead && w.status === 'active').length,
     };
   },
 
@@ -599,5 +618,139 @@ export const useSocialStore = create<SocialState>((set, get) => ({
       if (u.online) online++;
     }
     return { total: others.length, friends, pendingSent, pendingReceived, none, online };
+  },
+
+  // ===== 留言板操作 =====
+  getVisibleWallMessages: (wallOwnerId: string) => {
+    const state = get();
+    const currentId = state.currentUserId;
+    return state.wallMessages.filter(msg => {
+      if (msg.wallOwnerId !== wallOwnerId) return false;
+      if (msg.status !== 'active') {
+        // 墙主可以看到已隐藏的留言
+        return wallOwnerId === currentId;
+      }
+      // 可见性检查
+      if (msg.authorId === currentId) return true;
+      if (wallOwnerId === currentId) return true;
+      if (msg.visibility === 'public') return true;
+      if (msg.visibility === 'friends' && state.isFriend(msg.authorId)) return true;
+      return false;
+    });
+  },
+
+  getWallMessagesByAuthor: (authorId: string) => {
+    return get().wallMessages.filter(m => m.authorId === authorId && m.status === 'active');
+  },
+
+  getUnreadWallCount: () => {
+    const state = get();
+    return state.wallMessages.filter(w => w.wallOwnerId === state.currentUserId && !w.isRead && w.status === 'active').length;
+  },
+
+  addWallMessage: (wallOwnerId: string, content: string, visibility: Visibility, replyToId?: string | null) => {
+    const state = get();
+    if (!content.trim()) return false;
+    // 权限检查：可以给自己的墙留言，也可以给好友/公开墙留言
+    if (!state.canWriteWall(wallOwnerId)) return false;
+    const newMsg: WallMessage = {
+      id: generateId('w'),
+      wallOwnerId,
+      authorId: state.currentUserId,
+      content: content.trim(),
+      visibility,
+      status: 'active',
+      isRead: wallOwnerId === state.currentUserId, // 自己的墙默认已读
+      replyToId: replyToId || null,
+      createdAt: nowStr(),
+    };
+    set({ wallMessages: [newMsg, ...state.wallMessages] });
+    const wallOwner = state.users.find(u => u.id === wallOwnerId);
+    logActivity(set, get, 'add_wall_message', newMsg.id, wallOwner?.name || wallOwnerId, `在${wallOwner?.name || wallOwnerId}的留言板留言`);
+    return true;
+  },
+
+  editWallMessage: (messageId: string, content: string) => {
+    const state = get();
+    if (!content.trim()) return false;
+    const msg = state.wallMessages.find(m => m.id === messageId);
+    if (!msg || msg.authorId !== state.currentUserId) return false;
+    set({
+      wallMessages: state.wallMessages.map(m =>
+        m.id === messageId ? { ...m, content: content.trim(), updatedAt: nowStr() } : m
+      ),
+    });
+    logActivity(set, get, 'edit_wall_message', messageId, content.trim().slice(0, 20), `编辑留言`);
+    return true;
+  },
+
+  deleteWallMessage: (messageId: string) => {
+    const state = get();
+    const msg = state.wallMessages.find(m => m.id === messageId);
+    if (!msg) return;
+    // 只有作者和墙主可以删除
+    if (msg.authorId !== state.currentUserId && msg.wallOwnerId !== state.currentUserId) return;
+    set({ wallMessages: state.wallMessages.filter(m => m.id !== messageId) });
+    logActivity(set, get, 'delete_wall_message', messageId, msg.content.slice(0, 20), `删除留言「${msg.content.slice(0, 20)}」`);
+  },
+
+  hideWallMessage: (messageId: string) => {
+    const state = get();
+    const msg = state.wallMessages.find(m => m.id === messageId);
+    if (!msg || msg.wallOwnerId !== state.currentUserId) return;
+    set({
+      wallMessages: state.wallMessages.map(m =>
+        m.id === messageId ? { ...m, status: 'hidden' as const, updatedAt: nowStr() } : m
+      ),
+    });
+    logActivity(set, get, 'hide_wall_message', messageId, msg.content.slice(0, 20), `隐藏留言`);
+  },
+
+  restoreWallMessage: (messageId: string) => {
+    const state = get();
+    const msg = state.wallMessages.find(m => m.id === messageId);
+    if (!msg || msg.wallOwnerId !== state.currentUserId) return;
+    set({
+      wallMessages: state.wallMessages.map(m =>
+        m.id === messageId ? { ...m, status: 'active' as const, updatedAt: nowStr() } : m
+      ),
+    });
+    logActivity(set, get, 'restore_wall_message', messageId, msg.content.slice(0, 20), `恢复留言`);
+  },
+
+  markWallMessageRead: (messageId: string) => {
+    const state = get();
+    const msg = state.wallMessages.find(m => m.id === messageId);
+    if (!msg || msg.wallOwnerId !== state.currentUserId || msg.isRead) return;
+    set({
+      wallMessages: state.wallMessages.map(m =>
+        m.id === messageId ? { ...m, isRead: true } : m
+      ),
+    });
+  },
+
+  markAllWallRead: () => {
+    const state = get();
+    const unreadIds = state.wallMessages
+      .filter(w => w.wallOwnerId === state.currentUserId && !w.isRead && w.status === 'active')
+      .map(w => w.id);
+    if (unreadIds.length === 0) return 0;
+    const idSet = new Set(unreadIds);
+    set({
+      wallMessages: state.wallMessages.map(m =>
+        idSet.has(m.id) ? { ...m, isRead: true } : m
+      ),
+    });
+    logActivity(set, get, 'mark_wall_read', 'batch', `${unreadIds.length}条`, `批量标记 ${unreadIds.length} 条留言已读`);
+    return unreadIds.length;
+  },
+
+  canWriteWall: (wallOwnerId: string) => {
+    const state = get();
+    if (wallOwnerId === state.currentUserId) return true;
+    if (state.isFriend(wallOwnerId)) return true;
+    // 非好友也可以给公开墙留言（模拟校内网的开放留言）
+    const owner = state.users.find(u => u.id === wallOwnerId);
+    return !!owner; // 只要用户存在就可以留言
   },
 }));

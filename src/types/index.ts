@@ -77,6 +77,22 @@ export interface Article {
   createdAt: string;
 }
 
+// 留言板
+export type WallMessageStatus = 'active' | 'hidden';
+
+export interface WallMessage {
+  id: string;
+  wallOwnerId: string;   // 留言墙所属用户
+  authorId: string;      // 留言者
+  content: string;
+  visibility: Visibility;
+  status: WallMessageStatus;
+  isRead: boolean;       // 墙主是否已读
+  replyToId: string | null; // 回复某条留言
+  createdAt: string;
+  updatedAt?: string;
+}
+
 // 操作日志
 export type ActivityAction =
   | 'send_friend_request' | 'accept_friend_request' | 'reject_friend_request'
@@ -85,7 +101,8 @@ export type ActivityAction =
   | 'add_comment'
   | 'add_article' | 'delete_article' | 'update_article'
   | 'change_photo_visibility' | 'delete_photo'
-  | 'switch_user';
+  | 'switch_user'
+  | 'add_wall_message' | 'edit_wall_message' | 'hide_wall_message' | 'restore_wall_message' | 'delete_wall_message' | 'mark_wall_read';
 
 export interface ActivityLog {
   id: string;

@@ -1,10 +1,10 @@
 import { useSocialStore } from '@/store/socialStore';
-import { Users, FileText, Image, Search, Home, ChevronDown, Bell, BookOpen } from 'lucide-react';
+import { Users, FileText, Image, Search, Home, ChevronDown, Bell, BookOpen, MessageSquare } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function Header() {
-  const { currentUserId, users, switchUser, getStats } = useSocialStore();
+  const { currentUserId, users, switchUser, getStats, getUnreadWallCount } = useSocialStore();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -59,6 +59,15 @@ export default function Header() {
           <BookOpen size={16} /> 知识分享
         </button>
         <button
+          onClick={() => navigate('/wall')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors relative ${location.pathname === '/wall' ? 'bg-[#2A4A7F]' : 'hover:bg-[#2A4A7F]/60'}`}
+        >
+          <MessageSquare size={16} /> 留言板
+          {getUnreadWallCount() > 0 && (
+            <span className="absolute -top-1 -right-1 text-[9px] bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center">{getUnreadWallCount()}</span>
+          )}
+        </button>
+        <button
           onClick={() => navigate(`/profile/${currentUserId}`)}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${viewingOwnProfile ? 'bg-[#2A4A7F]' : 'hover:bg-[#2A4A7F]/60'}`}
         >
@@ -72,6 +81,7 @@ export default function Header() {
           <span className="flex items-center gap-1 text-[#B8C9E8]" title="动态数"><FileText size={14} /> <b className="text-white">{stats.postCount}</b></span>
           <span className="flex items-center gap-1 text-[#B8C9E8]" title="照片数"><Image size={14} /> <b className="text-white">{stats.photoCount}</b></span>
           <span className="flex items-center gap-1 text-[#B8C9E8]" title="评论数"><FileText size={14} /> <b className="text-white">{stats.commentCount}</b></span>
+          <span className="flex items-center gap-1 text-[#B8C9E8]" title="留言数"><MessageSquare size={14} /> <b className="text-white">{stats.wallMessageCount}</b></span>
           <span className="flex items-center gap-1 text-[#B8C9E8]" title="文章数"><BookOpen size={14} /> <b className="text-white">{stats.articleCount}</b></span>
           {totalPending > 0 ? (
             <button

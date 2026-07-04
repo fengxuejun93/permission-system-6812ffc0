@@ -29,6 +29,12 @@ const ACTION_CONFIG: Record<ActivityAction, { label: string; color: string; icon
   change_photo_visibility:{ label: '改照片权限', color: 'bg-purple-100 text-purple-700', icon: <Lock size={10} /> },
   delete_photo:           { label: '删除照片', color: 'bg-red-100 text-red-700', icon: <Trash2 size={10} /> },
   switch_user:            { label: '切换账号', color: 'bg-gray-100 text-gray-700', icon: <Users size={10} /> },
+  add_wall_message:       { label: '留言', color: 'bg-teal-100 text-teal-700', icon: <MessageSquare size={10} /> },
+  edit_wall_message:      { label: '编辑留言', color: 'bg-purple-100 text-purple-700', icon: <Pencil size={10} /> },
+  hide_wall_message:      { label: '隐藏留言', color: 'bg-gray-100 text-gray-700', icon: <Lock size={10} /> },
+  restore_wall_message:   { label: '恢复留言', color: 'bg-green-100 text-green-700', icon: <Globe size={10} /> },
+  delete_wall_message:    { label: '删除留言', color: 'bg-red-100 text-red-700', icon: <Trash2 size={10} /> },
+  mark_wall_read:         { label: '标记已读', color: 'bg-blue-100 text-blue-700', icon: <Check size={10} /> },
 };
 
 type TabKey = 'dashboard' | 'alerts' | 'logs';
@@ -141,7 +147,7 @@ export default function Notifications() {
             {activeTab === 'dashboard' && (
               <div className="space-y-4">
                 {/* 统计卡片 */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-4 gap-3">
                   <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
                     <div className="flex items-center gap-1.5 text-blue-600 text-xs font-medium mb-1"><Users size={14} /> 好友</div>
                     <div className="text-2xl font-bold text-blue-700">{stats.friendCount}</div>
@@ -151,6 +157,11 @@ export default function Notifications() {
                     <div className="flex items-center gap-1.5 text-green-600 text-xs font-medium mb-1"><FileText size={14} /> 动态</div>
                     <div className="text-2xl font-bold text-green-700">{stats.postCount}</div>
                     <div className="text-[10px] text-gray-400 mt-0.5">{stats.commentCount} 条评论</div>
+                  </div>
+                  <div className="bg-teal-50 rounded-lg p-3 border border-teal-100">
+                    <div className="flex items-center gap-1.5 text-teal-600 text-xs font-medium mb-1"><MessageSquare size={14} /> 留言</div>
+                    <div className="text-2xl font-bold text-teal-700">{stats.wallMessageCount}</div>
+                    {stats.unreadWallCount > 0 && <div className="text-[10px] text-amber-500 mt-0.5">{stats.unreadWallCount} 条未读</div>}
                   </div>
                   <div className="bg-purple-50 rounded-lg p-3 border border-purple-100">
                     <div className="flex items-center gap-1.5 text-purple-600 text-xs font-medium mb-1"><Image size={14} /> 照片/文章</div>

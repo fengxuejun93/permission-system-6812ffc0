@@ -5,6 +5,7 @@ import Search from "@/pages/Search";
 import Knowledge from "@/pages/Knowledge";
 import Notifications from "@/pages/Notifications";
 import Classmates from "@/pages/Classmates";
+import Wall from "@/pages/Wall";
 import { ToastProvider } from "@/components/Toast";
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="/classmates" element={<Classmates />} />
           <Route path="/knowledge" element={<Knowledge />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/wall" element={<Wall />} />
         </Routes>
       </Router>
     </ToastProvider>

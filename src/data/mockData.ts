@@ -1,4 +1,4 @@
-import type { User, Post, Photo, Comment, Friendship } from '@/types';
+import type { User, Post, Photo, Comment, Friendship, WallMessage } from '@/types';
 import { generateSampleImageUri } from '@/utils/sampleImages';
 
 export const mockUsers: User[] = [
@@ -135,4 +135,18 @@ export const mockComments: Comment[] = [
   { id: 'c8', postId: 'p7', authorId: 'u1', parentId: null, content: '恭喜考完！晚上出来庆祝？', createdAt: '2024-03-13 14:30' },
   { id: 'c9', postId: 'p5', authorId: 'u1', parentId: null, content: '太厉害了！恭喜师姐', createdAt: '2024-03-13 16:20' },
   { id: 'c10', postId: 'p8', authorId: 'u3', parentId: null, content: '理工男的浪漫哈哈', createdAt: '2024-03-12 17:30' },
+];
+
+// 留言板模拟数据
+export const mockWallMessages: WallMessage[] = [
+  { id: 'w1', wallOwnerId: 'u1', authorId: 'u2', content: '李明！好久不见，大学的日子真怀念啊～', visibility: 'public', status: 'active', isRead: true, replyToId: null, createdAt: '2024-03-15 10:00' },
+  { id: 'w2', wallOwnerId: 'u1', authorId: 'u4', content: '明哥，下次一起打球啊', visibility: 'public', status: 'active', isRead: true, replyToId: null, createdAt: '2024-03-14 16:30' },
+  { id: 'w3', wallOwnerId: 'u1', authorId: 'u5', content: '实习的时候多亏你帮忙，谢谢啦！', visibility: 'friends', status: 'active', isRead: false, replyToId: null, createdAt: '2024-03-14 09:15' },
+  { id: 'w4', wallOwnerId: 'u1', authorId: 'u1', content: '感谢大家来我留言板！这是我给自己的备忘', visibility: 'self', status: 'active', isRead: true, replyToId: null, createdAt: '2024-03-13 20:00' },
+  { id: 'w5', wallOwnerId: 'u2', authorId: 'u1', content: '芳姐生日快乐！🎂', visibility: 'public', status: 'active', isRead: true, replyToId: null, createdAt: '2024-03-12 08:00' },
+  { id: 'w6', wallOwnerId: 'u2', authorId: 'u3', content: '王芳，周末有空一起吃饭吗？', visibility: 'friends', status: 'active', isRead: false, replyToId: null, createdAt: '2024-03-13 14:00' },
+  { id: 'w7', wallOwnerId: 'u1', authorId: 'u2', content: '对啊！那些年一起熬夜赶作业的日子', visibility: 'public', status: 'active', isRead: true, replyToId: 'w1', createdAt: '2024-03-15 10:30' },
+  { id: 'w8', wallOwnerId: 'u1', authorId: 'u6', content: '学长好，我是赵磊，可以认识一下吗？', visibility: 'public', status: 'active', isRead: false, replyToId: null, createdAt: '2024-03-15 12:00' },
+  { id: 'w9', wallOwnerId: 'u3', authorId: 'u2', content: '张伟，清华园的樱花开了吗？', visibility: 'public', status: 'active', isRead: true, replyToId: null, createdAt: '2024-03-11 15:00' },
+  { id: 'w10', wallOwnerId: 'u1', authorId: 'u4', content: '这条留言被隐藏了', visibility: 'public', status: 'hidden', isRead: true, replyToId: null, createdAt: '2024-03-10 11:00' },
 ];

@@ -2,10 +2,10 @@ import { useSocialStore } from '@/store/socialStore';
 import { useToast } from '@/components/Toast';
 import Avatar from './Avatar';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, Bell, Clock, X, Users } from 'lucide-react';
+import { UserPlus, Bell, Clock, X, Users, MessageSquare } from 'lucide-react';
 
 export default function Sidebar() {
-  const { currentUserId, getFriendsOf, getRelation, getPendingReceived, getPendingSent, users, acceptFriendRequest, rejectFriendRequest, cancelFriendRequest } = useSocialStore();
+  const { currentUserId, getFriendsOf, getRelation, getPendingReceived, getPendingSent, users, acceptFriendRequest, rejectFriendRequest, cancelFriendRequest, getUnreadWallCount } = useSocialStore();
   const { showToast } = useToast();
   const friends = getFriendsOf(currentUserId);
   const pendingReceived = getPendingReceived();
@@ -161,6 +161,15 @@ export default function Sidebar() {
             className="w-full flex items-center justify-center gap-1.5 text-sm text-[#3B5998] hover:underline py-1"
           >
             <Users size={14} /> 同学录
+          </button>
+          <button
+            onClick={() => navigate('/wall')}
+            className="w-full flex items-center justify-center gap-1.5 text-sm text-[#3B5998] hover:underline py-1 relative"
+          >
+            <MessageSquare size={14} /> 我的留言板
+            {getUnreadWallCount() > 0 && (
+              <span className="text-[9px] bg-red-500 text-white rounded-full px-1 py-0 leading-none">{getUnreadWallCount()}</span>
+            )}
           </button>
           <button
             onClick={() => navigate('/search')}

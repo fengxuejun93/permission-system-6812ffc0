@@ -8,7 +8,8 @@ import PostCard from '@/components/PostCard';
 import PhotoCard from '@/components/PhotoCard';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { UserPlus, Check, Users, FileText, Image, ArrowLeft, Clock, XCircle, RotateCcw, Trash2, MessageSquare } from 'lucide-react';
-import type { Photo } from '@/types';
+import type { Photo, WallMessage } from '@/types';
+import WallMessageForm from '@/components/WallMessageForm';
 
 // 好友关系按钮组件
 function FriendButton({ userId, userName }: { userId: string; userName: string }) {
@@ -178,8 +179,9 @@ function ProfilePhotoCard({ photo, isOwner }: { photo: Photo; isOwner: boolean }
 export default function Profile() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
-  const { users, currentUserId, getVisiblePosts, getVisiblePhotos, getFriendsOf, posts, photos, comments, getMutualFriends, getCommentsForPost } = useSocialStore();
-  const [activeTab, setActiveTab] = useState<'posts' | 'photos' | 'friends'>('posts');
+  const { users, currentUserId, getVisiblePosts, getVisiblePhotos, getFriendsOf, posts, photos, comments, getMutualFriends, getCommentsForPost, getVisibleWallMessages, canWriteWall, deleteWallMessage, hideWallMessage, restoreWallMessage, markWallMessageRead, wallMessages } = useSocialStore();
+  const [activeTab, setActiveTab] = useState<'posts' | 'photos' | 'friends' | 'wall'>('posts');
+  const [replyTo, setReplyTo] = useState<WallMessage | null>(null);
 
   if (!userId) {
     return (
@@ -214,6 +216,9 @@ export default function Profile() {
   const allUserPhotos = photos.filter(p => p.ownerId === userId);
   const hiddenPostCount = allUserPosts.length - visiblePosts.length;
   const hiddenPhotoCount = allUserPhotos.length - visiblePhotos.length;
+  const visibleWallMsgs = getVisibleWallMessages(userId);
+  const wallMsgCount = visibleWallMsgs.filter(m => m.status === 'active').length;
+  const canWrite = canWriteWall(userId);
 
   // 共同好友
   const mutualFriends = !isMe ? getMutualFriends(userId) : [];
@@ -259,6 +264,7 @@ export default function Profile() {
           <span className="flex items-center gap-1.5 text-gray-500"><Users size={16} className="text-[#3B5998]" /> <b className="text-gray-800">{profileFriends.length}</b> 好友</span>
           <span className="flex items-center gap-1.5 text-gray-500"><FileText size={16} className="text-[#3B5998]" /> <b className="text-gray-800">{isMe ? allUserPosts.length : visiblePosts.length}</b> 动态</span>
           <span className="flex items-center gap-1.5 text-gray-500"><Image size={16} className="text-[#3B5998]" /> <b className="text-gray-800">{isMe ? allUserPhotos.length : visiblePhotos.length}</b> 照片</span>
+          <span className="flex items-center gap-1.5 text-gray-500"><MessageSquare size={16} className="text-[#3B5998]" /> <b className="text-gray-800">{wallMsgCount}</b> 留言</span>
           {!isMe && mutualFriends.length > 0 && (
             <span className="flex items-center gap-1.5 text-gray-500"><Users size={16} className="text-purple-500" /> <b className="text-gray-800">{mutualFriends.length}</b> 共同好友</span>
           )}
@@ -334,13 +340,13 @@ export default function Profile() {
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="flex border-b border-gray-200">
-            {(['posts', 'photos', 'friends'] as const).map(tab => (
+            {(['posts', 'photos', 'friends', 'wall'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`flex-1 py-3 text-sm font-medium transition-colors relative ${activeTab === tab ? 'text-[#3B5998]' : 'text-gray-500 hover:text-gray-700'}`}
               >
-                {tab === 'posts' ? '动态' : tab === 'photos' ? '照片' : '好友'}
+                {tab === 'posts' ? '动态' : tab === 'photos' ? '照片' : tab === 'friends' ? '好友' : '留言板'}
                 {activeTab === tab && <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-[#3B5998] rounded-full" />}
               </button>
             ))}
@@ -437,6 +443,145 @@ export default function Profile() {
                         <p className="text-gray-500 text-sm font-medium">该用户暂无好友</p>
                       </>
                     )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 留言板 Tab */}
+            {activeTab === 'wall' && (
+              <div>
+                {/* 留言表单 */}
+                {canWrite && (
+                  <div className="mb-4">
+                    <WallMessageForm
+                      wallOwnerId={userId}
+                      replyTo={replyTo}
+                      onSubmitted={() => setReplyTo(null)}
+                      onCancel={() => setReplyTo(null)}
+                    />
+                  </div>
+                )}
+
+                {/* 留言列表 */}
+                {visibleWallMsgs.filter(m => m.status === 'active').length > 0 ? (
+                  <div className="space-y-3">
+                    {visibleWallMsgs
+                      .filter(m => m.status === 'active' && m.replyToId === null)
+                      .map(msg => {
+                        const replies = visibleWallMsgs.filter(r => r.replyToId === msg.id && r.status === 'active');
+                        return (
+                          <div key={msg.id}>
+                            <div className="bg-white rounded-lg border border-gray-200 p-3">
+                              <div className="flex items-start gap-2.5">
+                                <button onClick={() => navigate(`/profile/${msg.authorId}`)} className="shrink-0">
+                                  <Avatar userId={msg.authorId} size={32} />
+                                </button>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <button onClick={() => navigate(`/profile/${msg.authorId}`)} className="text-sm font-semibold text-[#3B5998] hover:underline">
+                                      {users.find(u => u.id === msg.authorId)?.name}
+                                    </button>
+                                    <span className="text-[10px] text-gray-300">{msg.createdAt}</span>
+                                    {!msg.isRead && isMe && (
+                                      <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">未读</span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-gray-700 mt-1">{msg.content}</p>
+                                  <div className="flex items-center gap-3 mt-2">
+                                    {canWrite && (
+                                      <button onClick={() => setReplyTo(msg)} className="text-[10px] text-gray-400 hover:text-[#3B5998]">回复</button>
+                                    )}
+                                    {isMe && !msg.isRead && (
+                                      <button onClick={() => { markWallMessageRead(msg.id); }} className="text-[10px] text-gray-400 hover:text-green-500">标记已读</button>
+                                    )}
+                                    {(msg.authorId === currentUserId || isMe) && (
+                                      <button onClick={() => { deleteWallMessage(msg.id); }} className="text-[10px] text-gray-300 hover:text-red-400">删除</button>
+                                    )}
+                                    {isMe && (
+                                      <button onClick={() => { hideWallMessage(msg.id); }} className="text-[10px] text-gray-300 hover:text-gray-500">隐藏</button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            {replies.length > 0 && (
+                              <div className="ml-8 mt-2 space-y-2">
+                                {replies.map(reply => (
+                                  <div key={reply.id} className="bg-gray-50 rounded-lg border border-gray-100 p-2.5">
+                                    <div className="flex items-start gap-2">
+                                      <button onClick={() => navigate(`/profile/${reply.authorId}`)} className="shrink-0">
+                                        <Avatar userId={reply.authorId} size={24} />
+                                      </button>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1.5">
+                                          <button onClick={() => navigate(`/profile/${reply.authorId}`)} className="text-xs font-semibold text-[#3B5998] hover:underline">
+                                            {users.find(u => u.id === reply.authorId)?.name}
+                                          </button>
+                                          <span className="text-[10px] text-gray-300">{reply.createdAt}</span>
+                                        </div>
+                                        <p className="text-xs text-gray-600 mt-0.5">{reply.content}</p>
+                                        <div className="flex items-center gap-3 mt-1">
+                                          {canWrite && (
+                                            <button onClick={() => setReplyTo(reply)} className="text-[10px] text-gray-400 hover:text-[#3B5998]">回复</button>
+                                          )}
+                                          {(reply.authorId === currentUserId || isMe) && (
+                                            <button onClick={() => { deleteWallMessage(reply.id); }} className="text-[10px] text-gray-300 hover:text-red-400">删除</button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
+                ) : (
+                  <div className="py-10 text-center">
+                    <MessageSquare size={40} className="text-gray-200 mx-auto mb-3" />
+                    {isMe ? (
+                      <>
+                        <p className="text-gray-500 text-sm font-medium">你的留言板还是空的</p>
+                        <p className="text-gray-400 text-xs mt-1">给自己留一条，或让朋友来留言吧</p>
+                        <button onClick={() => navigate('/classmates')} className="mt-3 text-xs text-[#3B5998] hover:underline">邀请同学来留言</button>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-gray-500 text-sm font-medium">留言板还是空的</p>
+                        {canWrite ? (
+                          <>
+                            <p className="text-gray-400 text-xs mt-1">成为第一个留言的人吧</p>
+                          </>
+                        ) : (
+                          <p className="text-gray-400 text-xs mt-1">你无法在此留言板留言</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* 已隐藏留言（仅墙主可见） */}
+                {isMe && visibleWallMsgs.filter(m => m.status === 'hidden').length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-xs text-gray-400 mb-2 flex items-center gap-1">已隐藏的留言</h4>
+                    <div className="space-y-2">
+                      {visibleWallMsgs.filter(m => m.status === 'hidden').map(msg => (
+                        <div key={msg.id} className="bg-gray-50 rounded-lg border border-gray-100 p-3 opacity-70">
+                          <div className="flex items-center gap-2">
+                            <Avatar userId={msg.authorId} size={24} />
+                            <span className="text-xs text-gray-500">{users.find(u => u.id === msg.authorId)?.name}</span>
+                            <span className="text-[10px] text-gray-300">{msg.content.slice(0, 30)}...</span>
+                            <div className="ml-auto flex gap-1.5">
+                              <button onClick={() => { restoreWallMessage(msg.id); }} className="text-[10px] text-green-500 hover:underline">恢复</button>
+                              <button onClick={() => { deleteWallMessage(msg.id); }} className="text-[10px] text-red-400 hover:underline">删除</button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
