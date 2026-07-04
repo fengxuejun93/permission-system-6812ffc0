@@ -2,18 +2,20 @@ import { useState, useEffect } from 'react';
 import { useSocialStore } from '@/store/socialStore';
 import { useToast } from '@/components/Toast';
 import Avatar from './Avatar';
-import { MessageCircle, CornerDownRight, Lock } from 'lucide-react';
+import ConfirmDialog from './ConfirmDialog';
+import { MessageCircle, CornerDownRight, Lock, Trash2 } from 'lucide-react';
 
 interface Props {
   postId: string;
 }
 
 export default function CommentSection({ postId }: Props) {
-  const { getCommentsForPost, addComment, canComment, users, currentUserId } = useSocialStore();
+  const { getCommentsForPost, addComment, deleteComment, canComment, users, currentUserId } = useSocialStore();
   const { showToast } = useToast();
   const [newComment, setNewComment] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const comments = getCommentsForPost(postId);
   const hasPermission = canComment(postId);
 
@@ -79,14 +81,24 @@ export default function CommentSection({ postId }: Props) {
                       <span className="text-[10px] text-gray-400">{comment.createdAt}</span>
                     </div>
                     <p className="text-xs text-gray-700 mt-0.5">{comment.content}</p>
-                    {hasPermission && (
-                      <button
-                        onClick={() => setReplyTo(comment.id)}
-                        className="text-[10px] text-gray-400 hover:text-[#3B5998] mt-1"
-                      >
-                        回复
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2 mt-1">
+                      {hasPermission && (
+                        <button
+                          onClick={() => setReplyTo(comment.id)}
+                          className="text-[10px] text-gray-400 hover:text-[#3B5998]"
+                        >
+                          回复
+                        </button>
+                      )}
+                      {comment.authorId === currentUserId && (
+                        <button
+                          onClick={() => setDeleteTarget(comment.id)}
+                          className="text-[10px] text-gray-300 hover:text-red-400"
+                        >
+                          删除
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
                 {replies.map(reply => {
@@ -101,6 +113,14 @@ export default function CommentSection({ postId }: Props) {
                           <span className="text-[10px] text-gray-400">{reply.createdAt}</span>
                         </div>
                         <p className="text-xs text-gray-700 mt-0.5">{reply.content}</p>
+                        {reply.authorId === currentUserId && (
+                          <button
+                            onClick={() => setDeleteTarget(reply.id)}
+                            className="text-[10px] text-gray-300 hover:text-red-400 mt-0.5"
+                          >
+                            删除
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -147,6 +167,22 @@ export default function CommentSection({ postId }: Props) {
           <p className="text-[10px] text-gray-300 mt-0.5">仅作者的好友可以评论，成为好友后即可参与互动</p>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="删除评论"
+        message="确定要删除这条评论吗？此操作不可恢复。"
+        confirmLabel="删除"
+        danger
+        onConfirm={() => {
+          if (deleteTarget) {
+            deleteComment(deleteTarget);
+            showToast('评论已删除');
+          }
+          setDeleteTarget(null);
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

@@ -6,7 +6,7 @@ import PostForm from '@/components/PostForm';
 import PostCard from '@/components/PostCard';
 import Avatar from '@/components/Avatar';
 import { useNavigate } from 'react-router-dom';
-import { Search, FileText } from 'lucide-react';
+import { Search, FileText, Users, MessageSquare } from 'lucide-react';
 
 export default function Home() {
   const { getVisiblePosts, currentUserId, users, getFriendsOf, getRelation } = useSocialStore();
@@ -168,14 +168,51 @@ export default function Home() {
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3 mb-3">
-              <Avatar userId={currentUserId} size={48} />
+              <button onClick={() => navigate(`/profile/${currentUserId}`)} className="shrink-0 hover:opacity-90 transition-opacity">
+                <Avatar userId={currentUserId} size={48} />
+              </button>
               <div>
-                <div className="text-sm font-semibold text-gray-800">{currentUser?.name}</div>
+                <button onClick={() => navigate(`/profile/${currentUserId}`)} className="text-sm font-semibold text-gray-800 hover:text-[#3B5998] hover:underline">{currentUser?.name}</button>
                 <div className="text-xs text-gray-400">{currentUser?.school}</div>
               </div>
             </div>
             <p className="text-xs text-gray-500 italic">"{currentUser?.signature}"</p>
+            <div className="flex gap-2 mt-3">
+              <button onClick={() => navigate(`/profile/${currentUserId}`)} className="flex-1 flex items-center justify-center gap-1 text-xs text-[#3B5998] bg-blue-50 rounded-full py-1.5 hover:bg-blue-100 transition-colors">
+                <Users size={12} /> 我的主页
+              </button>
+              <button onClick={() => navigate('/wall')} className="flex-1 flex items-center justify-center gap-1 text-xs text-teal-600 bg-teal-50 rounded-full py-1.5 hover:bg-teal-100 transition-colors">
+                <MessageSquare size={12} /> 留言板
+              </button>
+            </div>
           </div>
+
+          {/* 好友快速入口 */}
+          {friends.length > 0 && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between">
+                <h3 className="font-semibold text-sm text-gray-800">好友 ({friends.length})</h3>
+                <button onClick={() => navigate('/classmates')} className="text-[10px] text-[#3B5998] hover:underline">查看全部</button>
+              </div>
+              <div className="py-1">
+                {friends.slice(0, 6).map(friend => (
+                  <button
+                    key={friend.id}
+                    onClick={() => navigate(`/profile/${friend.id}`)}
+                    className="w-full flex items-center gap-2.5 px-4 py-1.5 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <div className="relative shrink-0">
+                      <Avatar userId={friend.id} size={24} />
+                      {friend.online && (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 border-2 border-white rounded-full" />
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-700 truncate">{friend.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </aside>
       </div>
     </div>

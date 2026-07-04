@@ -35,7 +35,7 @@ interface Props {
 }
 
 export default function PostCard({ post }: Props) {
-  const { users, currentUserId, getVisiblePhotosForPost, deletePost, updatePostVisibility } = useSocialStore();
+  const { users, currentUserId, getVisiblePhotosForPost, deletePost, updatePostVisibility, getRelation } = useSocialStore();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const author = users.find(u => u.id === post.authorId);
@@ -126,6 +126,16 @@ export default function PostCard({ post }: Props) {
           <div className="text-xs text-gray-400">{author?.school} · {post.createdAt}</div>
 
           <p className="text-sm text-gray-800 mt-2 leading-relaxed">{post.content}</p>
+
+          {/* 可见性提示：非作者查看好友可见/仅自己可见动态时 */}
+          {!isAuthor && post.visibility === 'friends' && (
+            <div className="mt-2 text-[10px] text-gray-400 flex items-center gap-1 bg-gray-50 rounded px-2 py-1">
+              <Users size={10} /> 仅作者的好友可见此动态
+              {getRelation(post.authorId) !== 'friend' && (
+                <button onClick={() => navigate(`/profile/${post.authorId}`)} className="text-[#3B5998] hover:underline ml-1">去加好友</button>
+              )}
+            </div>
+          )}
 
           {visiblePhotos.length > 0 && (
             <div className="flex gap-2 mt-2 flex-wrap">

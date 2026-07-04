@@ -51,6 +51,7 @@ interface SocialState {
   switchUser: (userId: string) => void;
   addPost: (content: string, visibility: Visibility, imageUrl?: string, photoLabel?: string) => void;
   addComment: (postId: string, parentId: string | null, content: string) => boolean;
+  deleteComment: (commentId: string) => void;
   sendFriendRequest: (friendId: string) => void;
   acceptFriendRequest: (userId: string) => void;
   rejectFriendRequest: (userId: string) => void;
@@ -372,6 +373,16 @@ export const useSocialStore = create<SocialState>((set, get) => ({
     set({ comments: [...state.comments, newComment] });
     logActivity(set, get, 'add_comment', postId, content.slice(0, 20), `评论动态：${content.trim().slice(0, 20)}`);
     return true;
+  },
+
+  deleteComment: (commentId: string) => {
+    const state = get();
+    const comment = state.comments.find(c => c.id === commentId);
+    if (!comment) return;
+    // 只有评论作者可以删除自己的评论
+    if (comment.authorId !== state.currentUserId) return;
+    set({ comments: state.comments.filter(c => c.id !== commentId) });
+    logActivity(set, get, 'add_comment', comment.postId, comment.content.slice(0, 20), `删除评论：${comment.content.slice(0, 20)}`);
   },
 
   sendFriendRequest: (friendId: string) => {

@@ -179,7 +179,7 @@ function ProfilePhotoCard({ photo, isOwner }: { photo: Photo; isOwner: boolean }
 export default function Profile() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
-  const { users, currentUserId, getVisiblePosts, getVisiblePhotos, getFriendsOf, posts, photos, comments, getMutualFriends, getCommentsForPost, getVisibleWallMessages, canWriteWall, deleteWallMessage, hideWallMessage, restoreWallMessage, markWallMessageRead, wallMessages } = useSocialStore();
+  const { users, currentUserId, getVisiblePosts, getVisiblePhotos, getFriendsOf, posts, photos, comments, getMutualFriends, getCommentsForPost, getVisibleWallMessages, canWriteWall, deleteWallMessage, hideWallMessage, restoreWallMessage, markWallMessageRead, wallMessages, getRelation } = useSocialStore();
   const [activeTab, setActiveTab] = useState<'posts' | 'photos' | 'friends' | 'wall'>('posts');
   const [replyTo, setReplyTo] = useState<WallMessage | null>(null);
 
@@ -271,6 +271,9 @@ export default function Profile() {
           {!isMe && (hiddenPostCount > 0 || hiddenPhotoCount > 0) && (
             <span className="text-xs text-gray-400 ml-auto">
               因权限不可见：{hiddenPostCount > 0 && `${hiddenPostCount} 条动态`}{hiddenPostCount > 0 && hiddenPhotoCount > 0 && '、'}{hiddenPhotoCount > 0 && `${hiddenPhotoCount} 张照片`}
+              {!isMe && getRelation(userId) !== 'friend' && (
+                <button onClick={() => {}} className="text-[#3B5998] hover:underline ml-1">成为好友查看更多</button>
+              )}
             </span>
           )}
           {isMe && (hiddenPostCount > 0 || hiddenPhotoCount > 0) && (
