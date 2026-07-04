@@ -18,6 +18,11 @@ function FriendButton({ userId, userName }: { userId: string; userName: string }
   const [showUnfriendDialog, setShowUnfriendDialog] = useState(false);
 
   const handleSend = () => {
+    const currentRel = getRelation(userId);
+    if (currentRel !== 'none' && currentRel !== 'rejected') {
+      showToast('当前状态不允许发送好友申请', 'info');
+      return;
+    }
     sendFriendRequest(userId);
     showToast(`已向 ${userName} 发送好友申请`);
   };
@@ -26,14 +31,30 @@ function FriendButton({ userId, userName }: { userId: string; userName: string }
     showToast('已取消好友申请');
   };
   const handleAccept = () => {
+    const currentRel = getRelation(userId);
+    if (currentRel !== 'pending_received') {
+      showToast('该申请已处理', 'info');
+      return;
+    }
     acceptFriendRequest(userId);
     showToast(`已通过 ${userName} 的好友申请`);
   };
   const handleReject = () => {
+    const currentRel = getRelation(userId);
+    if (currentRel !== 'pending_received') {
+      showToast('该申请已处理', 'info');
+      return;
+    }
     rejectFriendRequest(userId);
     showToast(`已拒绝 ${userName} 的好友申请`);
   };
   const handleUnfriend = () => {
+    const currentRel = getRelation(userId);
+    if (currentRel !== 'friend') {
+      showToast('已不是好友关系', 'info');
+      setShowUnfriendDialog(false);
+      return;
+    }
     unfriend(userId);
     showToast(`已解除与 ${userName} 的好友关系`);
     setShowUnfriendDialog(false);

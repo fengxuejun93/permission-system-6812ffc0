@@ -76,3 +76,23 @@ export interface Article {
   imageUrl?: string;
   createdAt: string;
 }
+
+// 操作日志
+export type ActivityAction =
+  | 'send_friend_request' | 'accept_friend_request' | 'reject_friend_request'
+  | 'cancel_friend_request' | 'unfriend'
+  | 'add_post' | 'delete_post' | 'update_post_visibility'
+  | 'add_comment'
+  | 'add_article' | 'delete_article' | 'update_article'
+  | 'change_photo_visibility' | 'delete_photo'
+  | 'switch_user';
+
+export interface ActivityLog {
+  id: string;
+  action: ActivityAction;
+  operatorId: string;
+  targetId: string;       // 操作对象ID（好友userId/动态postId/照片photoId/文章articleId）
+  targetName: string;     // 操作对象名称（人名/动态内容摘要）
+  detail: string;         // 操作描述
+  createdAt: string;
+}

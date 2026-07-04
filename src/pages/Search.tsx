@@ -39,6 +39,12 @@ function SearchFriendButton({ userId, userName }: { userId: string; userName: st
   const relation = getRelation(userId);
 
   const handleSend = () => {
+    // 防止重复操作
+    const currentRel = getRelation(userId);
+    if (currentRel !== 'none' && currentRel !== 'rejected') {
+      showToast('当前状态不允许发送好友申请', 'info');
+      return;
+    }
     sendFriendRequest(userId);
     showToast(`已向 ${userName} 发送好友申请`);
   };
@@ -47,10 +53,20 @@ function SearchFriendButton({ userId, userName }: { userId: string; userName: st
     showToast('已取消好友申请');
   };
   const handleAccept = () => {
+    const currentRel = getRelation(userId);
+    if (currentRel !== 'pending_received') {
+      showToast('该申请已处理', 'info');
+      return;
+    }
     acceptFriendRequest(userId);
     showToast(`已通过 ${userName} 的好友申请`);
   };
   const handleReject = () => {
+    const currentRel = getRelation(userId);
+    if (currentRel !== 'pending_received') {
+      showToast('该申请已处理', 'info');
+      return;
+    }
     rejectFriendRequest(userId);
     showToast(`已拒绝 ${userName} 的好友申请`);
   };
@@ -187,7 +203,7 @@ function SearchResultCard({ user }: { user: User }) {
 // ===== 主搜索页面 =====
 export default function SearchPage() {
   const store = useSocialStore();
-  const { searchUsers, getFriendsOf, currentUserId, users, getRelation, getPendingReceived, getPendingSent, photos, getVisiblePosts, getVisiblePhotos, getMutualFriends } = store;
+  const { searchUsers, getFriendsOf, currentUserId, users, getRelation, getPendingReceived, getPendingSent, photos, getVisiblePosts, getVisiblePhotos, getMutualFriends, friendships } = store;
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -287,7 +303,7 @@ export default function SearchPage() {
         break;
     }
     return list;
-  }, [results, activeTab, filterOnline, searchField, keyword, getRelation, photos]);
+  }, [results, activeTab, filterOnline, searchField, keyword, getRelation, photos, friendships]);
 
   // 默认同学列表（未搜索时）
   const defaultUserList = useMemo(() => {
@@ -315,7 +331,7 @@ export default function SearchPage() {
       list = list.filter(u => u.online);
     }
     return list;
-  }, [users, currentUserId, activeTab, filterOnline, getRelation, pendingReceived, pendingSent, photos]);
+  }, [users, currentUserId, activeTab, filterOnline, getRelation, pendingReceived, pendingSent, photos, friendships]);
 
   // 动态照片流
   const filteredPosts = useMemo(() => {
@@ -328,7 +344,7 @@ export default function SearchPage() {
       list = list.filter(p => p.content.toLowerCase().includes(kw));
     }
     return list;
-  }, [getVisiblePosts, postVisFilter, postKeyword, currentUserId]);
+  }, [getVisiblePosts, postVisFilter, postKeyword, currentUserId, friendships]);
 
   const filteredPhotos = useMemo(() => {
     // 所有我能看到的照片
@@ -342,7 +358,7 @@ export default function SearchPage() {
       list = list.filter(p => p.visibility === postVisFilter);
     }
     return list;
-  }, [photos, currentUserId, postVisFilter, getRelation]);
+  }, [photos, currentUserId, postVisFilter, getRelation, friendships]);
 
   // 清除所有筛选
   const clearAllFilters = () => {

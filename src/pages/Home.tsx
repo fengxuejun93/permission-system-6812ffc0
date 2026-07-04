@@ -50,10 +50,7 @@ export default function Home() {
 
         <main className="flex-1 max-w-xl py-4 space-y-3">
           {/* 搜索入口 */}
-          <div
-            className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 flex items-center gap-2 cursor-pointer hover:border-[#3B5998]/40 transition-colors"
-            onClick={() => navigate('/search')}
-          >
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 flex items-center gap-2 hover:border-[#3B5998]/40 transition-colors">
             <Search size={18} className="text-gray-400 shrink-0" />
             <input
               type="text"
@@ -62,8 +59,6 @@ export default function Home() {
               onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
               placeholder="搜索同学、学校、院系..."
               className="flex-1 text-sm bg-transparent outline-none placeholder-gray-400"
-              onClick={e => { e.stopPropagation(); navigate('/search'); }}
-              readOnly
             />
             <button
               onClick={handleSearch}
