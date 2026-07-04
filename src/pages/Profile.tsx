@@ -7,19 +7,32 @@ import Avatar from '@/components/Avatar';
 import PostCard from '@/components/PostCard';
 import PhotoCard from '@/components/PhotoCard';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { UserPlus, Check, Users, FileText, Image, ArrowLeft, Clock, XCircle, RotateCcw, Trash2, MessageSquare } from 'lucide-react';
+import { UserPlus, Check, Users, FileText, Image, ArrowLeft, Clock, XCircle, RotateCcw, Trash2, MessageSquare, Shield, ShieldOff } from 'lucide-react';
 import type { Photo, WallMessage } from '@/types';
 import WallMessageForm from '@/components/WallMessageForm';
 
 // 好友关系按钮组件
 function FriendButton({ userId, userName }: { userId: string; userName: string }) {
-  const { getRelation, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend } = useSocialStore();
+  const { getRelation, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, restrictUser, unrestrictUser } = useSocialStore();
   const { showToast } = useToast();
   const relation = getRelation(userId);
   const [showUnfriendDialog, setShowUnfriendDialog] = useState(false);
+  const [showRestrictDialog, setShowRestrictDialog] = useState(false);
 
   const handleSend = () => {
     const currentRel = getRelation(userId);
+    if (currentRel === 'friend') {
+      showToast('你们已经是好友了', 'info');
+      return;
+    }
+    if (currentRel === 'pending_sent') {
+      showToast('已发送过申请，请等待对方确认', 'info');
+      return;
+    }
+    if (currentRel === 'restricted') {
+      showToast('你已限制该用户，请先解除限制再发送申请', 'info');
+      return;
+    }
     if (currentRel !== 'none' && currentRel !== 'rejected' && currentRel !== 'rejected_them') {
       showToast('当前状态不允许发送好友申请', 'info');
       return;
@@ -28,13 +41,18 @@ function FriendButton({ userId, userName }: { userId: string; userName: string }
     showToast(`已向 ${userName} 发送好友申请`);
   };
   const handleCancel = () => {
+    const currentRel = getRelation(userId);
+    if (currentRel !== 'pending_sent') {
+      showToast('没有可取消的申请', 'info');
+      return;
+    }
     cancelFriendRequest(userId);
     showToast('已取消好友申请');
   };
   const handleAccept = () => {
     const currentRel = getRelation(userId);
     if (currentRel !== 'pending_received') {
-      showToast('该申请已处理', 'info');
+      showToast('该申请已处理或不存在', 'info');
       return;
     }
     acceptFriendRequest(userId);
@@ -43,7 +61,7 @@ function FriendButton({ userId, userName }: { userId: string; userName: string }
   const handleReject = () => {
     const currentRel = getRelation(userId);
     if (currentRel !== 'pending_received') {
-      showToast('该申请已处理', 'info');
+      showToast('该申请已处理或不存在', 'info');
       return;
     }
     rejectFriendRequest(userId);
@@ -60,6 +78,15 @@ function FriendButton({ userId, userName }: { userId: string; userName: string }
     showToast(`已解除与 ${userName} 的好友关系`);
     setShowUnfriendDialog(false);
   };
+  const handleRestrict = () => {
+    restrictUser(userId);
+    showToast(`已将 ${userName} 加入受限列表，对方将无法查看你的好友可见和公开内容`);
+    setShowRestrictDialog(false);
+  };
+  const handleUnrestrict = () => {
+    unrestrictUser(userId);
+    showToast(`已将 ${userName} 移出受限列表`);
+  };
 
   switch (relation) {
     case 'friend':
@@ -68,12 +95,20 @@ function FriendButton({ userId, userName }: { userId: string; userName: string }
           <div className="flex items-center gap-1.5 text-sm text-white/80 bg-white/10 rounded-full px-4 py-2">
             <Check size={16} /> 已是好友
           </div>
-          <button
-            onClick={() => setShowUnfriendDialog(true)}
-            className="text-[10px] text-white/40 hover:text-red-300 transition-colors"
-          >
-            解除好友
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowUnfriendDialog(true)}
+              className="text-[10px] text-white/40 hover:text-red-300 transition-colors"
+            >
+              解除好友
+            </button>
+            <button
+              onClick={() => setShowRestrictDialog(true)}
+              className="text-[10px] text-white/40 hover:text-orange-300 transition-colors flex items-center gap-0.5"
+            >
+              <Shield size={8} /> 限制
+            </button>
+          </div>
           <ConfirmDialog
             open={showUnfriendDialog}
             title="解除好友"
@@ -82,6 +117,15 @@ function FriendButton({ userId, userName }: { userId: string; userName: string }
             danger
             onConfirm={handleUnfriend}
             onCancel={() => setShowUnfriendDialog(false)}
+          />
+          <ConfirmDialog
+            open={showRestrictDialog}
+            title="限制用户"
+            message={`确定要将「${userName}」加入受限列表吗？受限后对方将无法查看你的公开和好友可见内容，也无法给你留言。`}
+            confirmLabel="限制"
+            danger
+            onConfirm={handleRestrict}
+            onCancel={() => setShowRestrictDialog(false)}
           />
         </div>
       );
@@ -103,6 +147,20 @@ function FriendButton({ userId, userName }: { userId: string; userName: string }
           <button onClick={handleReject} className="flex items-center gap-1.5 text-sm bg-white/10 text-white/80 rounded-full px-4 py-2 hover:bg-white/20 transition-colors">
             <XCircle size={16} /> 拒绝
           </button>
+        </div>
+      );
+    case 'restricted':
+      return (
+        <div className="flex flex-col items-end gap-1.5">
+          <div className="flex items-center gap-1.5 text-sm text-orange-300 bg-orange-500/10 rounded-full px-4 py-2">
+            <Shield size={16} /> 已限制
+          </div>
+          <p className="text-[10px] text-white/40">对方无法查看你的内容和留言</p>
+          <div className="flex items-center gap-2">
+            <button onClick={handleUnrestrict} className="text-[10px] text-green-300/60 hover:text-green-300 transition-colors flex items-center gap-0.5">
+              <ShieldOff size={8} /> 解除限制
+            </button>
+          </div>
         </div>
       );
     case 'rejected':
@@ -130,9 +188,11 @@ function FriendButton({ userId, userName }: { userId: string; userName: string }
     case 'none':
     default:
       return (
-        <button onClick={handleSend} className="flex items-center gap-1.5 text-sm bg-white text-[#3B5998] rounded-full px-4 py-2 font-medium hover:bg-gray-100 transition-colors">
-          <UserPlus size={16} /> 加为好友
-        </button>
+        <div className="flex flex-col items-end gap-1">
+          <button onClick={handleSend} className="flex items-center gap-1.5 text-sm bg-white text-[#3B5998] rounded-full px-4 py-2 font-medium hover:bg-gray-100 transition-colors">
+            <UserPlus size={16} /> 加为好友
+          </button>
+        </div>
       );
   }
 }
@@ -179,7 +239,7 @@ function ProfilePhotoCard({ photo, isOwner }: { photo: Photo; isOwner: boolean }
 export default function Profile() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
-  const { users, currentUserId, getVisiblePosts, getVisiblePhotos, getFriendsOf, posts, photos, comments, getMutualFriends, getCommentsForPost, getVisibleWallMessages, canWriteWall, deleteWallMessage, hideWallMessage, restoreWallMessage, markWallMessageRead, wallMessages, getRelation } = useSocialStore();
+  const { users, currentUserId, getVisiblePosts, getVisiblePhotos, getFriendsOf, posts, photos, comments, getMutualFriends, getCommentsForPost, getVisibleWallMessages, canWriteWall, deleteWallMessage, hideWallMessage, restoreWallMessage, markWallMessageRead, wallMessages, getRelation, friendships } = useSocialStore();
   const [activeTab, setActiveTab] = useState<'posts' | 'photos' | 'friends' | 'wall'>('posts');
   const [replyTo, setReplyTo] = useState<WallMessage | null>(null);
 
@@ -258,6 +318,23 @@ export default function Profile() {
           )}
         </div>
       </div>
+
+      {/* 被限制提示横幅 */}
+      {!isMe && (() => {
+        const restrictedByThem = friendships.some(f => f.userId === userId && f.friendId === currentUserId && f.status === 'restricted');
+        return restrictedByThem;
+      })() && (
+        <div className="max-w-4xl mx-auto px-4 mt-3">
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-center gap-3">
+            <Shield size={20} className="text-orange-500 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-orange-700">你已被该用户限制访问</p>
+              <p className="text-xs text-orange-500 mt-0.5">你无法查看该用户的公开内容、照片和留言板</p>
+            </div>
+            <button onClick={() => navigate(-1)} className="ml-auto text-xs text-orange-400 hover:text-orange-600 shrink-0">返回上一页</button>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-4xl mx-auto px-4 -mt-1">
         <div className="bg-white rounded-b-lg shadow-sm border border-gray-200 border-t-0 px-6 py-3 flex items-center gap-6 text-sm flex-wrap">

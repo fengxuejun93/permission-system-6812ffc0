@@ -1,8 +1,8 @@
 export type Visibility = 'public' | 'friends' | 'self';
 
-export type FriendStatus = 'accepted' | 'pending' | 'rejected';
+export type FriendStatus = 'accepted' | 'pending' | 'rejected' | 'restricted';
 
-export type RelationType = 'self' | 'friend' | 'pending_sent' | 'pending_received' | 'rejected' | 'rejected_them' | 'none';
+export type RelationType = 'self' | 'friend' | 'pending_sent' | 'pending_received' | 'rejected' | 'rejected_them' | 'restricted' | 'none';
 
 export type ArticleCategory = 'mental_health' | 'fashion' | 'cooking' | 'hot_topics';
 
@@ -102,7 +102,8 @@ export type ActivityAction =
   | 'add_article' | 'delete_article' | 'update_article'
   | 'change_photo_visibility' | 'delete_photo'
   | 'switch_user'
-  | 'add_wall_message' | 'edit_wall_message' | 'hide_wall_message' | 'restore_wall_message' | 'delete_wall_message' | 'mark_wall_read';
+  | 'add_wall_message' | 'edit_wall_message' | 'hide_wall_message' | 'restore_wall_message' | 'delete_wall_message' | 'mark_wall_read'
+  | 'restrict_user' | 'unrestrict_user';
 
 export interface ActivityLog {
   id: string;

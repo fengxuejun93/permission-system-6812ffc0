@@ -78,6 +78,9 @@ interface SocialState {
   markWallMessageRead: (messageId: string) => void;
   markAllWallRead: () => number;
   canWriteWall: (wallOwnerId: string) => boolean;
+  restrictUser: (userId: string) => void;
+  unrestrictUser: (userId: string) => void;
+  isRestricted: (userId: string) => boolean;
 
   // 批量操作
   acceptAllFriendRequests: () => number;
@@ -132,6 +135,8 @@ export const useSocialStore = create<SocialState>((set, get) => ({
     const state = get();
     if (userId === state.currentUserId) return 'self';
     const fs = state.friendships;
+    // 受限检查优先（无论是否为好友都可能受限）
+    if (fs.some(f => f.userId === state.currentUserId && f.friendId === userId && f.status === 'restricted')) return 'restricted';
     if (fs.some(f => f.userId === state.currentUserId && f.friendId === userId && f.status === 'accepted')) return 'friend';
     if (fs.some(f => f.userId === state.currentUserId && f.friendId === userId && f.status === 'pending')) return 'pending_sent';
     if (fs.some(f => f.userId === userId && f.friendId === state.currentUserId && f.status === 'pending')) return 'pending_received';
@@ -181,6 +186,8 @@ export const useSocialStore = create<SocialState>((set, get) => ({
     }
     return posts.filter(post => {
       if (post.authorId === currentId) return true;
+      // 如果被对方限制，则不可见任何内容
+      if (state.friendships.some(f => f.userId === post.authorId && f.friendId === currentId && f.status === 'restricted')) return false;
       if (post.visibility === 'public') return true;
       if (post.visibility === 'friends' && state.isFriend(post.authorId)) return true;
       return false;
@@ -190,8 +197,11 @@ export const useSocialStore = create<SocialState>((set, get) => ({
   getVisiblePhotos: (ownerId: string) => {
     const state = get();
     const currentId = state.currentUserId;
+    // 如果被对方限制，则不可见任何照片
+    const restrictedByOwner = state.friendships.some(f => f.userId === ownerId && f.friendId === currentId && f.status === 'restricted');
     return state.photos.filter(photo => {
       if (photo.ownerId !== ownerId) return false;
+      if (restrictedByOwner) return false;
       if (ownerId === currentId) return true;
       if (photo.visibility === 'public') return true;
       if (photo.visibility === 'friends' && state.isFriend(ownerId)) return true;
@@ -220,6 +230,10 @@ export const useSocialStore = create<SocialState>((set, get) => ({
     const post = state.posts.find(p => p.id === postId);
     if (!post) return false;
     if (post.authorId === state.currentUserId) return true;
+    // 受限用户不能评论
+    if (state.getRelation(post.authorId) === 'restricted') return false;
+    // 被对方限制也不能评论
+    if (state.friendships.some(f => f.userId === post.authorId && f.friendId === state.currentUserId && f.status === 'restricted')) return false;
     if (post.visibility === 'public') return true;
     if (post.visibility === 'friends' && state.isFriend(post.authorId)) return true;
     return false;
@@ -760,8 +774,44 @@ export const useSocialStore = create<SocialState>((set, get) => ({
     const state = get();
     if (wallOwnerId === state.currentUserId) return true;
     if (state.isFriend(wallOwnerId)) return true;
+    // 受限用户不能给对方留言
+    if (state.getRelation(wallOwnerId) === 'restricted') return false;
     // 非好友也可以给公开墙留言（模拟校内网的开放留言）
     const owner = state.users.find(u => u.id === wallOwnerId);
     return !!owner; // 只要用户存在就可以留言
+  },
+
+  restrictUser: (userId: string) => {
+    const state = get();
+    if (userId === state.currentUserId) return;
+    const targetUser = state.users.find(u => u.id === userId);
+    // 移除现有的好友/申请关系，改为受限
+    const filtered = state.friendships.filter(
+      f => !((f.userId === state.currentUserId && f.friendId === userId) ||
+             (f.userId === userId && f.friendId === state.currentUserId))
+    );
+    const restrictedRel: Friendship = {
+      userId: state.currentUserId,
+      friendId: userId,
+      status: 'restricted',
+    };
+    set({ friendships: [...filtered, restrictedRel] });
+    logActivity(set, get, 'restrict_user', userId, targetUser?.name || userId, `已将 ${targetUser?.name || userId} 加入受限列表`);
+  },
+
+  unrestrictUser: (userId: string) => {
+    const state = get();
+    if (userId === state.currentUserId) return;
+    const targetUser = state.users.find(u => u.id === userId);
+    // 移除受限记录，恢复为陌生人
+    const filtered = state.friendships.filter(
+      f => !(f.userId === state.currentUserId && f.friendId === userId && f.status === 'restricted')
+    );
+    set({ friendships: filtered });
+    logActivity(set, get, 'unrestrict_user', userId, targetUser?.name || userId, `已将 ${targetUser?.name || userId} 移出受限列表`);
+  },
+
+  isRestricted: (userId: string) => {
+    return get().getRelation(userId) === 'restricted';
   },
 }));

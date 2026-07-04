@@ -53,7 +53,7 @@ function RelationBadge({ relation }: { relation: RelationType }) {
 
 // ===== 关系排序权重 =====
 const RELATION_ORDER: Record<RelationType, number> = {
-  self: 0, friend: 1, pending_received: 2, pending_sent: 3, rejected_them: 4, rejected: 5, none: 6,
+  self: 0, friend: 1, pending_received: 2, pending_sent: 3, rejected_them: 4, rejected: 5, restricted: 6, none: 7,
 };
 
 export default function Classmates() {
@@ -405,6 +405,8 @@ export default function Classmates() {
                                 </>
                               ) : relation === 'friend' ? (
                                 <span className="text-[10px] text-green-500">已是好友</span>
+                              ) : relation === 'restricted' ? (
+                                <span className="text-[10px] text-orange-500">已限制</span>
                               ) : null}
                               <button onClick={() => navigate(`/profile/${user.id}`)} className="text-[10px] text-[#3B5998] hover:underline ml-auto">主页</button>
                             </div>

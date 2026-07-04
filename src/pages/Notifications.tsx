@@ -35,6 +35,8 @@ const ACTION_CONFIG: Record<ActivityAction, { label: string; color: string; icon
   restore_wall_message:   { label: '恢复留言', color: 'bg-green-100 text-green-700', icon: <Globe size={10} /> },
   delete_wall_message:    { label: '删除留言', color: 'bg-red-100 text-red-700', icon: <Trash2 size={10} /> },
   mark_wall_read:         { label: '标记已读', color: 'bg-blue-100 text-blue-700', icon: <Check size={10} /> },
+  restrict_user:          { label: '限制用户', color: 'bg-orange-100 text-orange-700', icon: <Shield size={10} /> },
+  unrestrict_user:        { label: '解除限制', color: 'bg-green-100 text-green-700', icon: <Shield size={10} /> },
 };
 
 type TabKey = 'dashboard' | 'alerts' | 'logs';

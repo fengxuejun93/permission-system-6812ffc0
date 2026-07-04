@@ -7,7 +7,7 @@ import Avatar from '@/components/Avatar';
 import {
   Search, UserPlus, Check, Users, AlertCircle, Clock, XCircle,
   RotateCcw, X, Filter, Globe, Lock, Eye, Image, FileText,
-  MessageSquare, ChevronRight, CircleDot
+  MessageSquare, ChevronRight, CircleDot, Shield
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -34,13 +34,24 @@ const POST_VIS_FILTERS: { key: PostVisFilter; label: string; icon: React.ReactNo
 
 // ===== 搜索结果中的好友按钮 =====
 function SearchFriendButton({ userId, userName }: { userId: string; userName: string }) {
-  const { getRelation, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, rejectFriendRequest } = useSocialStore();
+  const { getRelation, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, rejectFriendRequest, restrictUser, unrestrictUser } = useSocialStore();
   const { showToast } = useToast();
   const relation = getRelation(userId);
 
   const handleSend = () => {
-    // 防止重复操作
     const currentRel = getRelation(userId);
+    if (currentRel === 'friend') {
+      showToast('你们已经是好友了', 'info');
+      return;
+    }
+    if (currentRel === 'pending_sent') {
+      showToast('已发送过申请，请等待对方确认', 'info');
+      return;
+    }
+    if (currentRel === 'restricted') {
+      showToast('你已限制该用户，请先解除限制', 'info');
+      return;
+    }
     if (currentRel !== 'none' && currentRel !== 'rejected' && currentRel !== 'rejected_them') {
       showToast('当前状态不允许发送好友申请', 'info');
       return;
@@ -49,13 +60,18 @@ function SearchFriendButton({ userId, userName }: { userId: string; userName: st
     showToast(`已向 ${userName} 发送好友申请`);
   };
   const handleCancel = () => {
+    const currentRel = getRelation(userId);
+    if (currentRel !== 'pending_sent') {
+      showToast('没有可取消的申请', 'info');
+      return;
+    }
     cancelFriendRequest(userId);
     showToast('已取消好友申请');
   };
   const handleAccept = () => {
     const currentRel = getRelation(userId);
     if (currentRel !== 'pending_received') {
-      showToast('该申请已处理', 'info');
+      showToast('该申请已处理或不存在', 'info');
       return;
     }
     acceptFriendRequest(userId);
@@ -64,18 +80,31 @@ function SearchFriendButton({ userId, userName }: { userId: string; userName: st
   const handleReject = () => {
     const currentRel = getRelation(userId);
     if (currentRel !== 'pending_received') {
-      showToast('该申请已处理', 'info');
+      showToast('该申请已处理或不存在', 'info');
       return;
     }
     rejectFriendRequest(userId);
     showToast(`已拒绝 ${userName} 的好友申请`);
   };
+  const handleRestrict = () => {
+    restrictUser(userId);
+    showToast(`已将 ${userName} 加入受限列表`);
+  };
+  const handleUnrestrict = () => {
+    unrestrictUser(userId);
+    showToast(`已将 ${userName} 移出受限列表`);
+  };
 
   switch (relation) {
     case 'friend':
       return (
-        <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 rounded-full px-3 py-1.5">
-          <Check size={14} /> 好友
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 rounded-full px-3 py-1.5">
+            <Check size={14} /> 好友
+          </div>
+          <button onClick={handleRestrict} className="text-[10px] text-gray-300 hover:text-orange-400 flex items-center gap-0.5">
+            <Shield size={8} /> 限制
+          </button>
         </div>
       );
     case 'pending_sent':
@@ -97,6 +126,15 @@ function SearchFriendButton({ userId, userName }: { userId: string; userName: st
             <button onClick={handleAccept} className="text-[10px] text-[#3B5998] hover:underline">通过</button>
             <button onClick={handleReject} className="text-[10px] text-gray-400 hover:text-red-500">拒绝</button>
           </div>
+        </div>
+      );
+    case 'restricted':
+      return (
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 rounded-full px-3 py-1.5">
+            <Shield size={14} /> 已限制
+          </div>
+          <button onClick={handleUnrestrict} className="text-[10px] text-green-400 hover:text-green-600">解除限制</button>
         </div>
       );
     case 'rejected':
