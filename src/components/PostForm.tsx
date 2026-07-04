@@ -6,6 +6,8 @@ import Avatar from './Avatar';
 import { Image, Globe, Users, Lock, ChevronDown, X, Upload } from 'lucide-react';
 import type { Visibility } from '@/types';
 
+const MAX_CONTENT_LENGTH = 500;
+
 const visOptions: { value: Visibility; label: string; icon: React.ReactNode }[] = [
   { value: 'public', label: '公开', icon: <Globe size={14} /> },
   { value: 'friends', label: '好友可见', icon: <Users size={14} /> },
@@ -31,6 +33,9 @@ export default function PostForm() {
   const visDropRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const isOverLimit = content.length > MAX_CONTENT_LENGTH;
+  const isEmpty = content.trim().length === 0;
+
   useEffect(() => {
     if (!visDropdown) return;
     const handler = (e: MouseEvent) => {
@@ -43,8 +48,12 @@ export default function PostForm() {
   }, [visDropdown]);
 
   const handleSubmit = () => {
-    if (!content.trim()) {
+    if (isEmpty) {
       showToast('请输入动态内容', 'info');
+      return;
+    }
+    if (isOverLimit) {
+      showToast(`内容不能超过 ${MAX_CONTENT_LENGTH} 字`, 'error');
       return;
     }
     addPost(content.trim(), visibility, imageUrl, imageLabel || undefined);
@@ -54,7 +63,6 @@ export default function PostForm() {
     setImageLabel('');
     setVisibility('public');
     setShowImagePicker(false);
-    // 重置文件输入，允许重新选同一文件
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -83,13 +91,11 @@ export default function PostForm() {
   };
 
   const removeImage = () => {
-    // 释放 blob URL 防止内存泄漏
     if (imageUrl && imageUrl.startsWith('blob:')) {
       URL.revokeObjectURL(imageUrl);
     }
     setImageUrl(undefined);
     setImageLabel('');
-    // 重置文件输入
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -104,13 +110,17 @@ export default function PostForm() {
             value={content}
             onChange={e => setContent(e.target.value)}
             placeholder="分享你的新鲜事..."
-            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-[#3B5998] resize-none transition-colors"
+            className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none resize-none transition-colors ${isOverLimit ? 'border-red-300 focus:border-red-400' : 'border-gray-200 focus:border-[#3B5998]'}`}
             rows={3}
           />
+          {/* 字符计数 */}
+          <div className={`text-[10px] mt-0.5 text-right ${isOverLimit ? 'text-red-400' : content.length > MAX_CONTENT_LENGTH * 0.8 ? 'text-amber-400' : 'text-gray-300'}`}>
+            {content.length}/{MAX_CONTENT_LENGTH}
+          </div>
 
           {/* 图片预览 */}
           {imageUrl && (
-            <div className="mt-2 relative inline-block">
+            <div className="mt-1 relative inline-block">
               <img
                 src={imageUrl}
                 alt={imageLabel || '照片预览'}
@@ -130,7 +140,7 @@ export default function PostForm() {
 
           {/* 图片选择面板 */}
           {showImagePicker && !imageUrl && (
-            <div className="mt-2 bg-gray-50 rounded-lg border border-gray-200 p-3">
+            <div className="mt-1 bg-gray-50 rounded-lg border border-gray-200 p-3">
               <div className="text-xs text-gray-500 mb-2">选择图片来源：</div>
               <div className="flex items-center gap-2 mb-3">
                 <button
@@ -200,7 +210,7 @@ export default function PostForm() {
             </div>
             <button
               onClick={handleSubmit}
-              disabled={!content.trim()}
+              disabled={isEmpty || isOverLimit}
               className="text-sm bg-[#3B5998] text-white px-4 py-1.5 rounded-full hover:bg-[#2A4A7F] disabled:opacity-40 transition-colors font-medium"
             >
               发布

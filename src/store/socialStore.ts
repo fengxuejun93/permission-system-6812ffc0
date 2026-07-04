@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import type { User, Post, Photo, Comment, Friendship, Visibility, RelationType } from '@/types';
+import type { User, Post, Photo, Comment, Friendship, Visibility, RelationType, Article, ArticleCategory } from '@/types';
 import { mockUsers, mockPosts, mockPhotos, mockComments, mockFriendships } from '@/data/mockData';
+import { mockArticles } from '@/data/mockArticles';
 import { generateSampleImageUri } from '@/utils/sampleImages';
 
 interface Stats {
@@ -9,6 +10,7 @@ interface Stats {
   photoCount: number;
   pendingReceivedCount: number;
   commentCount: number;
+  articleCount: number;
 }
 
 interface SocialState {
@@ -18,6 +20,7 @@ interface SocialState {
   photos: Photo[];
   comments: Comment[];
   friendships: Friendship[];
+  articles: Article[];
 
   // 计算属性
   currentUser: () => User;
@@ -32,8 +35,15 @@ interface SocialState {
   getCommentsForPost: (postId: string) => Comment[];
   canComment: (postId: string) => boolean;
   getStats: () => Stats;
+  getVisibleArticles: (category?: ArticleCategory) => Article[];
 
   // 操作
+  addArticle: (title: string, content: string, category: ArticleCategory, tags: string[], visibility: Visibility, imageUrl?: string) => void;
+  deleteArticle: (articleId: string) => void;
+  updateArticle: (articleId: string, updates: Partial<Pick<Article, 'title' | 'content' | 'category' | 'tags' | 'visibility' | 'imageUrl'>>) => boolean;
+  getHiddenArticleCount: (category?: ArticleCategory) => number;
+
+  // 社交操作
   switchUser: (userId: string) => void;
   addPost: (content: string, visibility: Visibility, imageUrl?: string, photoLabel?: string) => void;
   addComment: (postId: string, parentId: string | null, content: string) => boolean;
@@ -42,6 +52,10 @@ interface SocialState {
   rejectFriendRequest: (userId: string) => void;
   cancelFriendRequest: (friendId: string) => void;
   changePhotoVisibility: (photoId: string, visibility: Visibility) => void;
+  deletePost: (postId: string) => void;
+  updatePostVisibility: (postId: string, visibility: Visibility) => void;
+  deletePhoto: (photoId: string) => void;
+  unfriend: (userId: string) => void;
   searchUsers: (keyword: string) => User[];
 }
 
@@ -54,6 +68,7 @@ export const useSocialStore = create<SocialState>((set, get) => ({
   photos: mockPhotos,
   comments: mockComments,
   friendships: mockFriendships,
+  articles: mockArticles,
 
   currentUser: () => {
     const state = get();
@@ -174,7 +189,76 @@ export const useSocialStore = create<SocialState>((set, get) => ({
       photoCount: myPhotos.length,
       pendingReceivedCount: pendingReceived.length,
       commentCount: myComments.length,
+      articleCount: state.articles.filter(a => a.authorId === state.currentUserId).length,
     };
+  },
+
+  getVisibleArticles: (category?: ArticleCategory) => {
+    const state = get();
+    const currentId = state.currentUserId;
+    let articles = state.articles;
+    if (category) {
+      articles = articles.filter(a => a.category === category);
+    }
+    return articles.filter(article => {
+      if (article.authorId === currentId) return true;
+      if (article.visibility === 'public') return true;
+      if (article.visibility === 'friends' && state.isFriend(article.authorId)) return true;
+      return false;
+    });
+  },
+
+  addArticle: (title: string, content: string, category: ArticleCategory, tags: string[], visibility: Visibility, imageUrl?: string) => {
+    const state = get();
+    const newArticle: Article = {
+      id: generateId('a'),
+      authorId: state.currentUserId,
+      title: title.trim(),
+      content: content.trim(),
+      category,
+      tags: tags.map(t => t.trim()).filter(Boolean),
+      visibility,
+      imageUrl,
+      createdAt: new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '-'),
+    };
+    set(s => ({ articles: [newArticle, ...s.articles] }));
+  },
+
+  deleteArticle: (articleId: string) => {
+    const state = get();
+    const article = state.articles.find(a => a.id === articleId);
+    if (!article || article.authorId !== state.currentUserId) return;
+    set({ articles: state.articles.filter(a => a.id !== articleId) });
+  },
+
+  updateArticle: (articleId: string, updates) => {
+    const state = get();
+    const article = state.articles.find(a => a.id === articleId);
+    if (!article || article.authorId !== state.currentUserId) return false;
+    // 校验标题
+    if (updates.title !== undefined && !updates.title.trim()) return false;
+    // 校验内容
+    if (updates.content !== undefined && !updates.content.trim()) return false;
+    set({
+      articles: state.articles.map(a => a.id === articleId ? { ...a, ...updates } : a),
+    });
+    return true;
+  },
+
+  getHiddenArticleCount: (category?: ArticleCategory) => {
+    const state = get();
+    const currentId = state.currentUserId;
+    let articles = state.articles;
+    if (category) {
+      articles = articles.filter(a => a.category === category);
+    }
+    const hidden = articles.filter(article => {
+      if (article.authorId === currentId) return false;
+      if (article.visibility === 'public') return false;
+      if (article.visibility === 'friends' && state.isFriend(article.authorId)) return false;
+      return true;
+    });
+    return hidden.length;
   },
 
   switchUser: (userId: string) => {
@@ -287,6 +371,55 @@ export const useSocialStore = create<SocialState>((set, get) => ({
     set(state => ({
       photos: state.photos.map(p => p.id === photoId ? { ...p, visibility } : p),
     }));
+  },
+
+  deletePost: (postId: string) => {
+    const state = get();
+    const post = state.posts.find(p => p.id === postId);
+    if (!post || post.authorId !== state.currentUserId) return;
+    // 删除关联照片和评论
+    const photoIds = post.photoIds;
+    set({
+      posts: state.posts.filter(p => p.id !== postId),
+      photos: state.photos.filter(p => !photoIds.includes(p.id)),
+      comments: state.comments.filter(c => c.postId !== postId),
+    });
+  },
+
+  updatePostVisibility: (postId: string, visibility: Visibility) => {
+    const state = get();
+    const post = state.posts.find(p => p.id === postId);
+    if (!post || post.authorId !== state.currentUserId) return;
+    // 同步更新关联照片的可见性
+    set({
+      posts: state.posts.map(p => p.id === postId ? { ...p, visibility } : p),
+      photos: state.photos.map(p => post.photoIds.includes(p.id) ? { ...p, visibility } : p),
+    });
+  },
+
+  deletePhoto: (photoId: string) => {
+    const state = get();
+    const photo = state.photos.find(p => p.id === photoId);
+    if (!photo || photo.ownerId !== state.currentUserId) return;
+    // 从关联动态中移除该 photoId
+    set({
+      photos: state.photos.filter(p => p.id !== photoId),
+      posts: state.posts.map(p => ({
+        ...p,
+        photoIds: p.photoIds.filter(id => id !== photoId),
+      })),
+    });
+  },
+
+  unfriend: (userId: string) => {
+    const state = get();
+    // 删除双向好友关系
+    set({
+      friendships: state.friendships.filter(
+        f => !((f.userId === state.currentUserId && f.friendId === userId && f.status === 'accepted') ||
+               (f.userId === userId && f.friendId === state.currentUserId && f.status === 'accepted'))
+      ),
+    });
   },
 
   searchUsers: (keyword: string) => {

@@ -1,5 +1,5 @@
 import { useSocialStore } from '@/store/socialStore';
-import { Users, FileText, Image, Search, Home, ChevronDown, Bell } from 'lucide-react';
+import { Users, FileText, Image, Search, Home, ChevronDown, Bell, BookOpen } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -46,6 +46,12 @@ export default function Header() {
           <Search size={16} /> 搜索同学
         </button>
         <button
+          onClick={() => navigate('/knowledge')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${location.pathname === '/knowledge' ? 'bg-[#2A4A7F]' : 'hover:bg-[#2A4A7F]/60'}`}
+        >
+          <BookOpen size={16} /> 知识分享
+        </button>
+        <button
           onClick={() => navigate(`/profile/${currentUserId}`)}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors ${viewingOwnProfile ? 'bg-[#2A4A7F]' : 'hover:bg-[#2A4A7F]/60'}`}
         >
@@ -59,13 +65,23 @@ export default function Header() {
           <span className="flex items-center gap-1 text-[#B8C9E8]" title="动态数"><FileText size={14} /> <b className="text-white">{stats.postCount}</b></span>
           <span className="flex items-center gap-1 text-[#B8C9E8]" title="照片数"><Image size={14} /> <b className="text-white">{stats.photoCount}</b></span>
           <span className="flex items-center gap-1 text-[#B8C9E8]" title="评论数"><FileText size={14} /> <b className="text-white">{stats.commentCount}</b></span>
+          <span className="flex items-center gap-1 text-[#B8C9E8]" title="文章数"><BookOpen size={14} /> <b className="text-white">{stats.articleCount}</b></span>
           {stats.pendingReceivedCount > 0 && (
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/notifications')}
               className="flex items-center gap-1 text-amber-300 hover:text-amber-200 transition-colors"
               title={`${stats.pendingReceivedCount} 条待处理好友申请`}
             >
               <Bell size={14} /> <b>{stats.pendingReceivedCount}</b>
+            </button>
+          )}
+          {stats.pendingReceivedCount === 0 && (
+            <button
+              onClick={() => navigate('/notifications')}
+              className="flex items-center gap-1 text-[#8B9DC3] hover:text-white transition-colors"
+              title="通知中心"
+            >
+              <Bell size={14} />
             </button>
           )}
         </div>

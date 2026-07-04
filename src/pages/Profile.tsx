@@ -2,18 +2,20 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSocialStore } from '@/store/socialStore';
 import { useToast } from '@/components/Toast';
-import type { RelationType } from '@/types';
 import Header from '@/components/Header';
 import Avatar from '@/components/Avatar';
 import PostCard from '@/components/PostCard';
 import PhotoCard from '@/components/PhotoCard';
-import { UserPlus, Check, Users, FileText, Image, ArrowLeft, Clock, XCircle, RotateCcw } from 'lucide-react';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import { UserPlus, Check, Users, FileText, Image, ArrowLeft, Clock, XCircle, RotateCcw, UserMinus, Trash2 } from 'lucide-react';
+import type { RelationType, Photo } from '@/types';
 
 // 好友关系按钮组件
 function FriendButton({ userId, userName }: { userId: string; userName: string }) {
-  const { getRelation, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, rejectFriendRequest } = useSocialStore();
+  const { getRelation, sendFriendRequest, cancelFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend } = useSocialStore();
   const { showToast } = useToast();
   const relation = getRelation(userId);
+  const [showUnfriendDialog, setShowUnfriendDialog] = useState(false);
 
   const handleSend = () => {
     sendFriendRequest(userId);
@@ -35,11 +37,34 @@ function FriendButton({ userId, userName }: { userId: string; userName: string }
     showToast(`已拒绝 ${userName} 的好友申请`);
   };
 
+  const handleUnfriend = () => {
+    unfriend(userId);
+    showToast(`已解除与 ${userName} 的好友关系`);
+    setShowUnfriendDialog(false);
+  };
+
   switch (relation) {
     case 'friend':
       return (
-        <div className="flex items-center gap-1.5 text-sm text-white/80 bg-white/10 rounded-full px-4 py-2">
-          <Check size={16} /> 已是好友
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-1.5 text-sm text-white/80 bg-white/10 rounded-full px-4 py-2">
+            <Check size={16} /> 已是好友
+          </div>
+          <button
+            onClick={() => setShowUnfriendDialog(true)}
+            className="text-[10px] text-white/40 hover:text-red-300 transition-colors"
+          >
+            解除好友
+          </button>
+          <ConfirmDialog
+            open={showUnfriendDialog}
+            title="解除好友"
+            message={`确定要解除与「${userName}」的好友关系吗？解除后你将无法看到对方好友可见的动态和照片。`}
+            confirmLabel="解除"
+            danger
+            onConfirm={handleUnfriend}
+            onCancel={() => setShowUnfriendDialog(false)}
+          />
         </div>
       );
     case 'pending_sent':
@@ -100,11 +125,49 @@ function FriendButton({ userId, userName }: { userId: string; userName: string }
   }
 }
 
+// 照片卡片带删除功能
+function ProfilePhotoCard({ photo, isOwner }: { photo: Photo; isOwner: boolean }) {
+  const { deletePhoto } = useSocialStore();
+  const { showToast } = useToast();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const handleDelete = () => {
+    deletePhoto(photo.id);
+    showToast(`照片「${photo.label}」已删除`);
+    setShowDeleteDialog(false);
+  };
+
+  return (
+    <div className="relative">
+      <PhotoCard photo={photo} isOwner={isOwner} />
+      {isOwner && (
+        <>
+          <button
+            onClick={() => setShowDeleteDialog(true)}
+            className="absolute top-1.5 left-1.5 w-5 h-5 bg-black/40 text-white rounded-full flex items-center justify-center hover:bg-red-500/80 transition-colors"
+            title="删除照片"
+          >
+            <Trash2 size={10} />
+          </button>
+          <ConfirmDialog
+            open={showDeleteDialog}
+            title="删除照片"
+            message={`确定要删除照片「${photo.label}」吗？如果该照片关联了某条动态，也会从动态中移除。此操作不可恢复。`}
+            confirmLabel="删除"
+            danger
+            onConfirm={handleDelete}
+            onCancel={() => setShowDeleteDialog(false)}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function Profile() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
-  const { users, currentUserId, isFriend, getVisiblePosts, getVisiblePhotos, getFriendsOf, posts, photos } = useSocialStore();
-  const { showToast } = useToast();
+  const { users, currentUserId, getVisiblePosts, getVisiblePhotos, getFriendsOf, posts, photos } = useSocialStore();
   const [activeTab, setActiveTab] = useState<'posts' | 'photos' | 'friends'>('posts');
 
   if (!userId) {
@@ -216,7 +279,7 @@ export default function Profile() {
             {activeTab === 'photos' && (
               <div className="grid grid-cols-3 gap-3">
                 {visiblePhotos.map(photo => (
-                  <PhotoCard key={photo.id} photo={photo} isOwner={isMe} />
+                  <ProfilePhotoCard key={photo.id} photo={photo} isOwner={isMe} />
                 ))}
                 {visiblePhotos.length === 0 && (
                   <div className="col-span-3 text-center text-gray-400 text-sm py-8">
